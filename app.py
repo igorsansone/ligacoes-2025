@@ -17,6 +17,11 @@ load_dotenv()
 
 # Banco de dados: SQLite local por padrão; PostgreSQL se DATABASE_URL estiver definido
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data.db")
+
+# Normaliza URL do Railway se vier como postgres:// (SQLAlchemy recomenda postgresql+psycopg2://)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+
 # Ajuste para SQLite com check_same_thread se necessário
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
@@ -45,6 +50,10 @@ DUVIDA_OPCOES = [
     "Dúvida sanada - Profissional não apto ao voto (-60 dias)",
     "Dúvida sanada - Profissional não apto ao voto (militar exclusivo)",
 ]
+
+# Garante que as pastas existam no runtime (evita erro no Railway quando a pasta está vazia no Git)
+os.makedirs("static", exist_ok=True)
+os.makedirs("templates", exist_ok=True)
 
 app = FastAPI(title="Controle de Ligações - Eleição 2025")
 
@@ -116,9 +125,15 @@ def stats_por_dia():
     try:
         # Função de data por banco (SQLite vs Postgres)
         if DATABASE_URL.startswith("sqlite"):
-            rows = db.execute(text("SELECT strftime('%Y-%m-%d', created_at) as dia, COUNT(*) FROM ligacoes GROUP BY dia ORDER BY dia")).all()
+            rows = db.execute(text(
+                "SELECT strftime('%Y-%m-%d', created_at) as dia, COUNT(*) "
+                "FROM ligacoes GROUP BY dia ORDER BY dia"
+            )).all()
         else:
-            rows = db.execute(text("SELECT to_char(created_at::date, 'YYYY-MM-DD') as dia, COUNT(*) FROM ligacoes GROUP BY dia ORDER BY dia")).all()
+            rows = db.execute(text(
+                "SELECT to_char(created_at::date, 'YYYY-MM-DD') as dia, COUNT(*) "
+                "FROM ligacoes GROUP BY dia ORDER BY dia"
+            )).all()
         labels = [r[0] for r in rows]
         counts = [int(r[1]) for r in rows]
         return {"labels": labels, "counts": counts}
