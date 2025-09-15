@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-3">Editar ligação #{{ ligacao.id }}</h5>
+        <form method="post" action="/editar/{{ ligacao.id }}" class="vstack gap-3">
+          <div>
+            <label class="form-label fw-semibold">CRO</label>
+            <input type="text" name="cro" class="form-control" value="{{ ligacao.cro }}" required>
+          </div>
+          <div>
+            <label class="form-label fw-semibold">Nome do Inscrito</label>
+            <input type="text" name="nome_inscrito" class="form-control" value="{{ ligacao.nome_inscrito }}" required>
+          </div>
+          <div>
+            <label class="form-label fw-semibold">Dúvida</label>
+            <select name="duvida" class="form-select" required>
+              {% for opt in duvida_opcoes %}
+              <option value="{{ opt }}" {% if opt == ligacao.duvida %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label fw-semibold">Observação</label>
+            <textarea name="observacao" class="form-control" rows="4">{{ ligacao.observacao or '' }}</textarea>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Salvar alterações</button>
+            <a href="/" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+
+          <div class="form-text">
+            Criada em: <strong>{{ format_sp(ligacao.created_at) }}</strong>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
