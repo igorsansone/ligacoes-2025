@@ -22,6 +22,10 @@
               {% endfor %}
             </select>
           </div>
+          <div>
+            <label class="form-label fw-semibold">Observação</label>
+            <textarea name="observacao" class="form-control" rows="3" placeholder="Opcional: detalhes adicionais"></textarea>
+          </div>
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-success">Cadastrar ligação</button>
             <a class="btn btn-outline-secondary" href="/relatorios">Ver relatórios</a>
@@ -43,7 +47,9 @@
                 <th>CRO</th>
                 <th>Nome</th>
                 <th>Dúvida</th>
+                <th>Observação</th>
                 <th>Data/Hora</th>
+                <th class="text-end">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -53,11 +59,19 @@
                 <td>{{ l.cro }}</td>
                 <td>{{ l.nome_inscrito }}</td>
                 <td>{{ l.duvida }}</td>
+                <td style="max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ l.observacao or '' }}">
+                  {{ (l.observacao or '') }}
+                </td>
                 <td>{{ l.created_at.strftime("%d/%m/%Y %H:%M") if l.created_at else "-" }}</td>
+                <td class="text-end">
+                  <form method="post" action="/excluir/{{ l.id }}" onsubmit="return confirm('Excluir a ligação #{{ l.id }}?');" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                  </form>
+                </td>
               </tr>
               {% else %}
               <tr>
-                <td colspan="5" class="text-muted">Nenhum registro ainda.</td>
+                <td colspan="7" class="text-muted">Nenhum registro ainda.</td>
               </tr>
               {% endfor %}
             </tbody>
