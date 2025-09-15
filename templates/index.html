@@ -62,7 +62,7 @@
                 <td style="max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ l.observacao or '' }}">
                   {{ (l.observacao or '') }}
                 </td>
-                <td>{{ l.created_at.strftime("%d/%m/%Y %H:%M") if l.created_at else "-" }}</td>
+                <td>{{ format_sp(l.created_at) }}</td>
                 <td class="text-end">
                   <form method="post" action="/excluir/{{ l.id }}" onsubmit="return confirm('Excluir a ligação #{{ l.id }}?');" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
