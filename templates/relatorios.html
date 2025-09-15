@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- Cabeçalho específico para impressão (aparece só no PDF) -->
+<!-- Cabeçalho específico para impressão (aparece no PDF) -->
 <div class="only-print mb-3">
   <div class="d-flex align-items-center gap-3">
-    <img src="/static/logo-crors.png" alt="CRO/RS" width="64" height="64" onerror="this.style.display='none'">
+    <img src="/static/logo-crors.png" alt="CRO/RS" class="print-logo" onerror="this.style.display='none'">
     <div>
       <h5 class="mb-0">ELEIÇÕES CRORS - 2025</h5>
       <small>Relatórios de ligações</small>
@@ -21,63 +21,250 @@
   </div>
 </div>
 
+<!-- Filtros -->
+<div class="card shadow-sm mb-4 no-print">
+  <div class="card-body">
+    <form class="row g-3 align-items-end">
+      <div class="col-sm-3">
+        <label class="form-label">Início</label>
+        <input type="date" id="fStart" class="form-control">
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label">Fim</label>
+        <input type="date" id="fEnd" class="form-control">
+      </div>
+      <div class="col-sm-4">
+        <label class="form-label">Tipo de Dúvida (multi)</label>
+        <select id="fTipos" class="form-select" multiple size="4">
+          {% for opt in duvida_opcoes %}
+          <option value="{{ opt }}">{{ opt }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">Segure CTRL (ou CMD) para selecionar múltiplos.</div>
+      </div>
+      <div class="col-sm-2 d-flex gap-2">
+        <button type="button" id="btnAplicar" class="btn btn-primary w-100">Aplicar</button>
+        <button type="button" id="btnLimpar" class="btn btn-outline-secondary">Limpar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="row g-4">
+  <!-- Por Tipo -->
   <div class="col-lg-6">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h6 class="card-title">Distribuição por Tipo de Dúvida</h6>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="card-title m-0">Distribuição por Tipo de Dúvida</h6>
+          <div class="no-print d-flex gap-2">
+            <button id="btnTipoBar" class="btn btn-sm btn-outline-primary">Barra</button>
+            <button id="btnTipoPie" class="btn btn-sm btn-outline-primary">Pizza</button>
+            <button id="btnTipoDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+          </div>
+        </div>
         <canvas id="chartDuvida"></canvas>
+        <div class="small text-muted mt-2" id="totalDuvidas"></div>
       </div>
     </div>
   </div>
+
+  <!-- Por Dia -->
   <div class="col-lg-6">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h6 class="card-title">Ligações por Dia</h6>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="card-title m-0">Ligações por Dia (BR/RS)</h6>
+          <div class="no-print d-flex flex-wrap gap-2">
+            <div class="form-check me-2">
+              <input class="form-check-input" type="checkbox" id="chkMedia">
+              <label class="form-check-label" for="chkMedia">Média móvel 7d</label>
+            </div>
+            <button id="btnZoomReset" class="btn btn-sm btn-outline-secondary">Reset Zoom</button>
+            <button id="btnDiaDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+          </div>
+        </div>
         <canvas id="chartDia"></canvas>
+        <div class="form-text mt-2">Arraste para **zoom** (horizontal). Use a roda do mouse para zoom. Segure **Alt** para pan.</div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Scripts: Chart.js + plugin de Zoom -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
 <script>
-async function loadChartDuvida() {
-  const res = await fetch('/api/stats/por_duvida');
+const elStart = document.getElementById('fStart');
+const elEnd = document.getElementById('fEnd');
+const elTipos = document.getElementById('fTipos');
+
+function getTiposSelecionados() {
+  return Array.from(elTipos.selectedOptions).map(o => o.value);
+}
+
+function buildQuery() {
+  const params = new URLSearchParams();
+  if (elStart.value) params.set('start', elStart.value);
+  if (elEnd.value) params.set('end', elEnd.value);
+  const tipos = getTiposSelecionados();
+  if (tipos.length) params.set('tipos', tipos.join(','));
+  return params.toString();
+}
+
+function pct(value, total) {
+  if (!total) return '0%';
+  return ((value / total) * 100).toFixed(1) + '%';
+}
+
+let chartDuvida, chartDia;
+
+function destroyChart(c) { if (c) { c.destroy(); } }
+
+async function loadDuvida() {
+  const q = buildQuery();
+  const res = await fetch('/api/stats/por_duvida' + (q ? '?' + q : ''));
   const data = await res.json();
+
   const ctx = document.getElementById('chartDuvida');
-  new Chart(ctx, {
-    type: 'bar',
+  destroyChart(chartDuvida);
+
+  const total = data.total || data.counts.reduce((a,b)=>a+b,0);
+  document.getElementById('totalDuvidas').innerText = `Total de ligações no período: ${total}`;
+
+  chartDuvida = new Chart(ctx, {
+    type: window._tipoDuvida || 'bar',
     data: {
       labels: data.labels,
-      datasets: [{ label: 'Quantidade', data: data.counts }]
+      datasets: [{
+        label: 'Quantidade',
+        data: data.counts
+      }]
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { x: { ticks: { autoSkip: false } }, y: { beginAtZero: true } }
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.raw ?? 0;
+              return `${val} (${pct(val, total)})`;
+            }
+          }
+        }
+      },
+      scales: window._tipoDuvida === 'pie' ? {} : {
+        x: { ticks: { autoSkip: false } },
+        y: { beginAtZero: true }
+      }
     }
   });
 }
 
-async function loadChartDia() {
-  const res = await fetch('/api/stats/por_dia');
+function movingAverage(arr, w=7) {
+  const out = [];
+  for (let i=0;i<arr.length;i++) {
+    const s = Math.max(0, i-w+1);
+    const slice = arr.slice(s, i+1);
+    const m = slice.reduce((a,b)=>a+b,0) / slice.length;
+    out.push(Number(m.toFixed(2)));
+  }
+  return out;
+}
+
+async function loadDia() {
+  const q = buildQuery();
+  const res = await fetch('/api/stats/por_dia' + (q ? '?' + q : ''));
   const data = await res.json();
+
   const ctx = document.getElementById('chartDia');
-  new Chart(ctx, {
+  destroyChart(chartDia);
+
+  const baseDataset = {
+    label: 'Ligações por dia',
+    data: data.counts
+  };
+  const datasets = [baseDataset];
+
+  if (document.getElementById('chkMedia').checked) {
+    datasets.push({
+      label: 'Média móvel 7d',
+      data: movingAverage(data.counts, 7),
+      borderWidth: 2,
+      tension: 0.2
+    });
+  }
+
+  chartDia = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels: data.labels,
-      datasets: [{ label: 'Ligações por dia', data: data.counts }]
-    },
+    data: { labels: data.labels, datasets },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
+      plugins: {
+        legend: { display: true },
+        zoom: {
+          zoom: {
+            wheel: { enabled: true },
+            drag: { enabled: true },
+            mode: 'x'
+          },
+          pan: {
+            enabled: true,
+            mode: 'x',
+            modifierKey: 'alt'
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
     }
   });
 }
 
-loadChartDuvida();
-loadChartDia();
+/* Botões e eventos */
+document.getElementById('btnAplicar').addEventListener('click', () => {
+  loadDuvida(); loadDia();
+});
+document.getElementById('btnLimpar').addEventListener('click', () => {
+  elStart.value = ''; elEnd.value = '';
+  Array.from(elTipos.options).forEach(o=>o.selected=false);
+  loadDuvida(); loadDia();
+});
+
+document.getElementById('btnTipoBar').addEventListener('click', () => {
+  window._tipoDuvida = 'bar';
+  loadDuvida();
+});
+document.getElementById('btnTipoPie').addEventListener('click', () => {
+  window._tipoDuvida = 'pie';
+  loadDuvida();
+});
+
+document.getElementById('chkMedia').addEventListener('change', () => {
+  loadDia();
+});
+
+document.getElementById('btnZoomReset').addEventListener('click', () => {
+  if (chartDia) chartDia.resetZoom();
+});
+
+document.getElementById('btnTipoDownload').addEventListener('click', () => {
+  if (!chartDuvida) return;
+  const url = chartDuvida.toBase64Image();
+  const a = document.createElement('a');
+  a.href = url; a.download = 'por_tipo.png'; a.click();
+});
+
+document.getElementById('btnDiaDownload').addEventListener('click', () => {
+  if (!chartDia) return;
+  const url = chartDia.toBase64Image();
+  const a = document.createElement('a');
+  a.href = url; a.download = 'por_dia.png'; a.click();
+});
+
+/* Carrega inicial */
+loadDuvida(); loadDia();
 </script>
 {% endblock %}
