@@ -8,10 +8,18 @@
     <style>
       .only-print { display: none; }
       footer { border-top: 1px solid #eaeaea; }
+
+      /* LOGO sem distorção (navbar e impressão) */
+      .brand-logo { height: 40px; width: auto; object-fit: contain; }
+      @media (min-width: 992px) {
+        .brand-logo { height: 44px; }
+      }
+      .print-logo { height: 64px; width: auto; object-fit: contain; }
+
       @media print {
-        .no-print { display:none !important; }
-        .only-print { display:block !important; }
-        .print-container { padding:0; margin:0; }
+        .no-print { display: none !important; }
+        .only-print { display: block !important; }
+        .print-container { padding: 0; margin: 0; }
         a[href]:after { content: ""; } /* não mostrar URLs ao lado dos links */
       }
     </style>
@@ -21,7 +29,7 @@
     <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top no-print">
       <div class="container">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/">
-          <img src="/static/logo-crors.png" alt="CRO/RS" width="32" height="32" onerror="this.style.display='none'">
+          <img src="/static/logo-crors.png" alt="CRO/RS" class="brand-logo" onerror="this.style.display='none'">
           <span>ELEIÇÕES CRORS - 2025</span>
         </a>
         <div class="d-flex gap-2">
