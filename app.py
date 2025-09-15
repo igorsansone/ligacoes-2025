@@ -195,39 +195,103 @@ def excluir(ligacao_id: int):
         db.close()
     return RedirectResponse("/", status_code=303)
 
+# ... (restante do seu app.py permanece igual)
+# Certifique-se de que DUVIDA_OPCOES, to_sp(), etc. já existem como te enviei antes.
+
 # Relatórios (página com gráficos e botão de impressão)
 @app.get("/relatorios")
 def relatorios(request: Request):
-    return templates.TemplateResponse("relatorios.html", {"request": request})
+    # agora mandamos as opções para montar o filtro no template
+    return templates.TemplateResponse("relatorios.html", {
+        "request": request,
+        "duvida_opcoes": DUVIDA_OPCOES,
+    })
 
-# API: estatística por dúvida
+def _parse_date(s: str):
+    # "YYYY-MM-DD" -> date; se vazio/None, retorna None
+    try:
+        if not s:
+            return None
+        y, m, d = map(int, s.split("-"))
+        from datetime import date
+        return date(y, m, d)
+    except Exception:
+        return None
+
+def _filter_rows(rows, start_date, end_date, tipos):
+    # start_date/end_date são dates no fuso BR (America/Sao_Paulo)
+    # tipos é set() de strings; se vazio, não filtra por tipo
+    filtered = []
+    for row in rows:
+        # row pode ser Ligacao ou tupla (Ligacao.created_at, Ligacao.duvida)
+        if isinstance(row, tuple):
+            dt, duvida = row
+        else:
+            dt, duvida = row.created_at, row.duvida
+
+        if not dt:
+            continue
+        dia_br = to_sp(dt).date()  # dia no fuso America/Sao_Paulo
+
+        if start_date and dia_br < start_date:
+            continue
+        if end_date and dia_br > end_date:
+            continue
+        if tipos and duvida not in tipos:
+            continue
+        filtered.append((dia_br, duvida))
+    return filtered
+
+# API: estatística por dúvida (com filtros)
 @app.get("/api/stats/por_duvida")
-def stats_por_duvida():
+def stats_por_duvida(request: Request):
+    # Query params: start=YYYY-MM-DD, end=YYYY-MM-DD, tipos=csv
+    start = _parse_date(request.query_params.get("start"))
+    end = _parse_date(request.query_params.get("end"))
+    tipos_raw = request.query_params.get("tipos", "")
+    tipos = set([t for t in (s.strip() for s in tipos_raw.split(",")) if t]) if tipos_raw else set()
+
     db = SessionLocal()
     try:
-        rows = db.query(Ligacao.duvida, func.count(Ligacao.id)).group_by(Ligacao.duvida).all()
-        data = {duvida: count for duvida, count in rows}
-        labels = DUVIDA_OPCOES
-        counts = [int(data.get(lbl, 0)) for lbl in labels]
-        return {"labels": labels, "counts": counts}
+        # buscamos created_at e duvida para aplicar filtro no fuso BR
+        rows = db.query(Ligacao.created_at, Ligacao.duvida).all()
     finally:
         db.close()
 
-# API: estatística por dia (convertendo para America/Sao_Paulo)
+    filtered = _filter_rows(rows, start, end, tipos)
+
+    # conta por tipo
+    counts_map = {}
+    for _, duvida in filtered:
+        counts_map[duvida] = counts_map.get(duvida, 0) + 1
+
+    labels = DUVIDA_OPCOES[:]  # ordem fixa
+    counts = [int(counts_map.get(lbl, 0)) for lbl in labels]
+    total = sum(counts)
+    return {"labels": labels, "counts": counts, "total": total}
+
+# API: estatística por dia (com filtros e fuso BR)
 @app.get("/api/stats/por_dia")
-def stats_por_dia():
+def stats_por_dia(request: Request):
+    start = _parse_date(request.query_params.get("start"))
+    end = _parse_date(request.query_params.get("end"))
+    tipos_raw = request.query_params.get("tipos", "")
+    tipos = set([t for t in (s.strip() for s in tipos_raw.split(",")) if t]) if tipos_raw else set()
+
     db = SessionLocal()
     try:
-        rows = db.query(Ligacao.created_at).all()
-        counts_by_day = {}
-        for (dt,) in rows:
-            if not dt:
-                continue
-            d_sp = to_sp(dt).date().isoformat()  # YYYY-MM-DD no fuso BR
-            counts_by_day[d_sp] = counts_by_day.get(d_sp, 0) + 1
-
-        labels = sorted(counts_by_day.keys())
-        counts = [counts_by_day[d] for d in labels]
-        return {"labels": labels, "counts": counts}
+        rows = db.query(Ligacao.created_at, Ligacao.duvida).all()
     finally:
         db.close()
+
+    filtered = _filter_rows(rows, start, end, tipos)
+
+    # grupo por dia
+    by_day = {}
+    for dia, _ in filtered:
+        k = dia.isoformat()
+        by_day[k] = by_day.get(k, 0) + 1
+
+    labels = sorted(by_day.keys())
+    counts = [by_day[d] for d in labels]
+    return {"labels": labels, "counts": counts}
