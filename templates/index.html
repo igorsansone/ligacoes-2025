@@ -30,11 +30,12 @@
             <button type="submit" class="btn btn-success">Cadastrar ligação</button>
             <a class="btn btn-outline-secondary" href="/relatorios">Ver relatórios</a>
           </div>
-          <div class="form-text">A data e a hora são preenchidas automaticamente.</div>
+          <div class="form-text">A data e a hora são preenchidas automaticamente (fuso: Brasil/RS).</div>
         </form>
       </div>
     </div>
   </div>
+
   <div class="col-lg-7">
     <div class="card shadow-sm">
       <div class="card-body">
@@ -64,6 +65,7 @@
                 </td>
                 <td>{{ format_sp(l.created_at) }}</td>
                 <td class="text-end">
+                  <a href="/editar/{{ l.id }}" class="btn btn-sm btn-outline-primary me-1">Editar</a>
                   <form method="post" action="/excluir/{{ l.id }}" onsubmit="return confirm('Excluir a ligação #{{ l.id }}?');" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
                   </form>
