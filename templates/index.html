@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-3">Cadastrar nova ligação</h5>
+        <form method="post" action="/cadastrar" class="vstack gap-3">
+          <div>
+            <label class="form-label fw-semibold">CRO</label>
+            <input type="text" name="cro" class="form-control" placeholder="Ex.: CRO/RS 12345" required>
+          </div>
+          <div>
+            <label class="form-label fw-semibold">Nome do Inscrito</label>
+            <input type="text" name="nome_inscrito" class="form-control" placeholder="Nome completo" required>
+          </div>
+          <div>
+            <label class="form-label fw-semibold">Dúvida</label>
+            <select name="duvida" class="form-select" required>
+              {% for opt in duvida_opcoes %}
+              <option value="{{ opt }}">{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Cadastrar ligação</button>
+            <a class="btn btn-outline-secondary" href="/relatorios">Ver relatórios</a>
+          </div>
+          <div class="form-text">A data e a hora são preenchidas automaticamente.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-3">Últimas ligações cadastradas</h5>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>CRO</th>
+                <th>Nome</th>
+                <th>Dúvida</th>
+                <th>Data/Hora</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for l in ligacoes %}
+              <tr>
+                <td>{{ l.id }}</td>
+                <td>{{ l.cro }}</td>
+                <td>{{ l.nome_inscrito }}</td>
+                <td>{{ l.duvida }}</td>
+                <td>{{ l.created_at.strftime("%d/%m/%Y %H:%M") if l.created_at else "-" }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-muted">Nenhum registro ainda.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

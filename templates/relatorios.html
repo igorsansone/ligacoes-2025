@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="m-0">Relatórios e Gráficos</h4>
+  <div class="no-print d-flex gap-2">
+    <button class="btn btn-outline-secondary" onclick="window.print()">Imprimir / Salvar PDF</button>
+    <a class="btn btn-outline-primary" href="/">Voltar ao cadastro</a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Distribuição por Tipo de Dúvida</h6>
+        <canvas id="chartDuvida"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Ligações por Dia</h6>
+        <canvas id="chartDia"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadChartDuvida() {
+  const res = await fetch('/api/stats/por_duvida');
+  const data = await res.json();
+  const ctx = document.getElementById('chartDuvida');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: 'Quantidade',
+        data: data.counts
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { autoSkip: false } }, y: { beginAtZero: true } }
+    }
+  });
+}
+
+async function loadChartDia() {
+  const res = await fetch('/api/stats/por_dia');
+  const data = await res.json();
+  const ctx = document.getElementById('chartDia');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: 'Ligações por dia',
+        data: data.counts
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+loadChartDuvida();
+loadChartDia();
+</script>
+{% endblock %}
