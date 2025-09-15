@@ -2,12 +2,12 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, text, func
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, text, func, inspect
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 from dotenv import load_dotenv
@@ -37,9 +37,21 @@ class Ligacao(Base):
     cro = Column(String(50), nullable=False)
     nome_inscrito = Column(String(255), nullable=False)
     duvida = Column(String(100), nullable=False)
+    observacao = Column(String(1000), nullable=True)  # NOVO CAMPO
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
+# Cria tabela se não existir
 Base.metadata.create_all(bind=engine)
+
+# MIGRAÇÃO LEVE: adiciona coluna 'observacao' se faltar (SQLite/Postgres)
+insp = inspect(engine)
+cols = [c["name"] for c in insp.get_columns("ligacoes")]
+if "observacao" not in cols:
+    with engine.begin() as conn:
+        if DATABASE_URL.startswith("sqlite"):
+            conn.execute(text("ALTER TABLE ligacoes ADD COLUMN observacao VARCHAR(1000)"))
+        else:
+            conn.execute(text("ALTER TABLE ligacoes ADD COLUMN observacao VARCHAR(1000) NULL"))
 
 DUVIDA_OPCOES = [
     "Dúvida sanada - Profissional apto ao voto",
@@ -51,7 +63,7 @@ DUVIDA_OPCOES = [
     "Dúvida sanada - Profissional não apto ao voto (militar exclusivo)",
 ]
 
-# Garante que as pastas existam no runtime (evita erro no Railway quando a pasta está vazia no Git)
+# Garante que as pastas existam no runtime
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 
@@ -81,19 +93,33 @@ def cadastrar(
     cro: str = Form(...),
     nome_inscrito: str = Form(...),
     duvida: str = Form(...),
+    observacao: str = Form(""),  # NOVO
 ):
     if duvida not in DUVIDA_OPCOES:
-        # Sanitiza para evitar valores inesperados
         duvida = DUVIDA_OPCOES[0]
     db = SessionLocal()
     try:
-        # Cria registro com timestamp (UTC) para consistência
         novo = Ligacao(
             cro=cro.strip(),
             nome_inscrito=nome_inscrito.strip(),
             duvida=duvida.strip(),
+            observacao=(observacao or "").strip(),
         )
         db.add(novo)
+        db.commit()
+    finally:
+        db.close()
+    return RedirectResponse("/", status_code=303)
+
+# EXCLUIR ligação
+@app.post("/excluir/{ligacao_id}")
+def excluir(ligacao_id: int):
+    db = SessionLocal()
+    try:
+        obj = db.get(Ligacao, ligacao_id)
+        if not obj:
+            raise HTTPException(status_code=404, detail="Registro não encontrado")
+        db.delete(obj)
         db.commit()
     finally:
         db.close()
@@ -111,7 +137,6 @@ def stats_por_duvida():
     try:
         rows = db.query(Ligacao.duvida, func.count(Ligacao.id)).group_by(Ligacao.duvida).all()
         data = {duvida: count for duvida, count in rows}
-        # Garante que todas as opções apareçam no gráfico (mesmo com zero)
         labels = DUVIDA_OPCOES
         counts = [int(data.get(lbl, 0)) for lbl in labels]
         return {"labels": labels, "counts": counts}
@@ -123,7 +148,6 @@ def stats_por_duvida():
 def stats_por_dia():
     db = SessionLocal()
     try:
-        # Função de data por banco (SQLite vs Postgres)
         if DATABASE_URL.startswith("sqlite"):
             rows = db.execute(text(
                 "SELECT strftime('%Y-%m-%d', created_at) as dia, COUNT(*) "
