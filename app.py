@@ -71,7 +71,7 @@ DUVIDA_OPCOES = [
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 
-app = FastAPI(title="Controle de Ligações - Eleição 2025")
+app = FastAPI(title="Controle de Ligações - ELEIÇÕES CRORS - 2025")
 
 # Static / Templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
