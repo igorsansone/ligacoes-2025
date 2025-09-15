@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request, Form, HTTPException
@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 # Carrega .env (opcional)
 load_dotenv()
 
+# Fuso desejado (Brasil/RS)
+TZ = ZoneInfo("America/Sao_Paulo")
+
 # Banco de dados: SQLite local por padrão; PostgreSQL se DATABASE_URL estiver definido
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data.db")
 
@@ -22,7 +25,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
-# Ajuste para SQLite com check_same_thread se necessário
+# Ajuste para SQLite
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
@@ -37,13 +40,14 @@ class Ligacao(Base):
     cro = Column(String(50), nullable=False)
     nome_inscrito = Column(String(255), nullable=False)
     duvida = Column(String(100), nullable=False)
-    observacao = Column(String(1000), nullable=True)  # NOVO CAMPO
+    observacao = Column(String(1000), nullable=True)
+    # Usamos server_default para DB e também podemos setar valor em Python (UTC) no insert
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 # Cria tabela se não existir
 Base.metadata.create_all(bind=engine)
 
-# MIGRAÇÃO LEVE: adiciona coluna 'observacao' se faltar (SQLite/Postgres)
+# MIGRAÇÃO LEVE: adiciona coluna 'observacao' se faltar
 insp = inspect(engine)
 cols = [c["name"] for c in insp.get_columns("ligacoes")]
 if "observacao" not in cols:
@@ -73,6 +77,20 @@ app = FastAPI(title="Controle de Ligações - Eleição 2025")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# Helpers de fuso horário
+UTC = ZoneInfo("UTC")
+def to_sp(dt):
+    if dt is None:
+        return None
+    # Se vier sem tzinfo (naive), consideramos que o DB gravou em UTC
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(TZ)
+
+def format_sp(dt):
+    dt_sp = to_sp(dt)
+    return dt_sp.strftime("%d/%m/%Y %H:%M") if dt_sp else "-"
+
 # Página inicial: formulário e lista
 @app.get("/")
 def home(request: Request):
@@ -81,11 +99,15 @@ def home(request: Request):
         ligacoes = db.query(Ligacao).order_by(Ligacao.id.desc()).limit(50).all()
     finally:
         db.close()
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "duvida_opcoes": DUVIDA_OPCOES,
-        "ligacoes": ligacoes,
-    })
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "duvida_opcoes": DUVIDA_OPCOES,
+            "ligacoes": ligacoes,
+            "format_sp": format_sp,  # função para usar no template
+        },
+    )
 
 # Cadastrar ligação
 @app.post("/cadastrar")
@@ -93,7 +115,7 @@ def cadastrar(
     cro: str = Form(...),
     nome_inscrito: str = Form(...),
     duvida: str = Form(...),
-    observacao: str = Form(""),  # NOVO
+    observacao: str = Form(""),
 ):
     if duvida not in DUVIDA_OPCOES:
         duvida = DUVIDA_OPCOES[0]
@@ -104,6 +126,8 @@ def cadastrar(
             nome_inscrito=nome_inscrito.strip(),
             duvida=duvida.strip(),
             observacao=(observacao or "").strip(),
+            # Garantimos UTC no Python; o server_default também cobre se não setarmos
+            created_at=datetime.now(timezone.utc),
         )
         db.add(novo)
         db.commit()
@@ -143,23 +167,22 @@ def stats_por_duvida():
     finally:
         db.close()
 
-# API: estatística por dia (data do created_at)
+# API: estatística por dia (convertendo para America/Sao_Paulo)
 @app.get("/api/stats/por_dia")
 def stats_por_dia():
     db = SessionLocal()
     try:
-        if DATABASE_URL.startswith("sqlite"):
-            rows = db.execute(text(
-                "SELECT strftime('%Y-%m-%d', created_at) as dia, COUNT(*) "
-                "FROM ligacoes GROUP BY dia ORDER BY dia"
-            )).all()
-        else:
-            rows = db.execute(text(
-                "SELECT to_char(created_at::date, 'YYYY-MM-DD') as dia, COUNT(*) "
-                "FROM ligacoes GROUP BY dia ORDER BY dia"
-            )).all()
-        labels = [r[0] for r in rows]
-        counts = [int(r[1]) for r in rows]
+        # Buscamos todos os timestamps e agrupamos em Python pelo dia no fuso de SP/RS.
+        rows = db.query(Ligacao.created_at).all()
+        counts_by_day = {}
+        for (dt,) in rows:
+            if not dt:
+                continue
+            d_sp = to_sp(dt).date().isoformat()  # YYYY-MM-DD no fuso BR
+            counts_by_day[d_sp] = counts_by_day.get(d_sp, 0) + 1
+
+        labels = sorted(counts_by_day.keys())
+        counts = [counts_by_day[d] for d in labels]
         return {"labels": labels, "counts": counts}
     finally:
         db.close()
