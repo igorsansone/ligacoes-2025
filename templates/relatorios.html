@@ -1,5 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
+
+<!-- Cabeçalho específico para impressão (aparece só no PDF) -->
+<div class="only-print mb-3">
+  <div class="d-flex align-items-center gap-3">
+    <img src="/static/logo-crors.png" alt="CRO/RS" width="64" height="64" onerror="this.style.display='none'">
+    <div>
+      <h5 class="mb-0">ELEIÇÕES CRORS - 2025</h5>
+      <small>Relatórios de ligações</small>
+    </div>
+  </div>
+  <hr>
+</div>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="m-0">Relatórios e Gráficos</h4>
   <div class="no-print d-flex gap-2">
@@ -36,10 +49,7 @@ async function loadChartDuvida() {
     type: 'bar',
     data: {
       labels: data.labels,
-      datasets: [{
-        label: 'Quantidade',
-        data: data.counts
-      }]
+      datasets: [{ label: 'Quantidade', data: data.counts }]
     },
     options: {
       responsive: true,
@@ -57,10 +67,7 @@ async function loadChartDia() {
     type: 'line',
     data: {
       labels: data.labels,
-      datasets: [{
-        label: 'Ligações por dia',
-        data: data.counts
-      }]
+      datasets: [{ label: 'Ligações por dia', data: data.counts }]
     },
     options: {
       responsive: true,
