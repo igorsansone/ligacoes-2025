@@ -41,7 +41,6 @@ class Ligacao(Base):
     nome_inscrito = Column(String(255), nullable=False)
     duvida = Column(String(100), nullable=False)
     observacao = Column(String(1000), nullable=True)
-    # Usamos server_default para DB e também podemos setar valor em Python (UTC) no insert
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 # Cria tabela se não existir
@@ -71,7 +70,7 @@ DUVIDA_OPCOES = [
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 
-app = FastAPI(title="Controle de Ligações - ELEIÇÕES CRORS - 2025")
+app = FastAPI(title="ELEIÇÕES CRORS - 2025")
 
 # Static / Templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -105,7 +104,7 @@ def home(request: Request):
             "request": request,
             "duvida_opcoes": DUVIDA_OPCOES,
             "ligacoes": ligacoes,
-            "format_sp": format_sp,  # função para usar no template
+            "format_sp": format_sp,
         },
     )
 
@@ -126,10 +125,57 @@ def cadastrar(
             nome_inscrito=nome_inscrito.strip(),
             duvida=duvida.strip(),
             observacao=(observacao or "").strip(),
-            # Garantimos UTC no Python; o server_default também cobre se não setarmos
             created_at=datetime.now(timezone.utc),
         )
         db.add(novo)
+        db.commit()
+    finally:
+        db.close()
+    return RedirectResponse("/", status_code=303)
+
+# --- EDITAR (GET): formulário preenchido
+@app.get("/editar/{ligacao_id}")
+def editar_form(request: Request, ligacao_id: int):
+    db = SessionLocal()
+    try:
+        obj = db.get(Ligacao, ligacao_id)
+        if not obj:
+            raise HTTPException(status_code=404, detail="Registro não encontrado")
+    finally:
+        db.close()
+    return templates.TemplateResponse(
+        "editar.html",
+        {
+            "request": request,
+            "ligacao": obj,
+            "duvida_opcoes": DUVIDA_OPCOES,
+            "format_sp": format_sp,
+        },
+    )
+
+# --- EDITAR (POST): salvar alterações
+@app.post("/editar/{ligacao_id}")
+def editar_submit(
+    ligacao_id: int,
+    cro: str = Form(...),
+    nome_inscrito: str = Form(...),
+    duvida: str = Form(...),
+    observacao: str = Form(""),
+):
+    if duvida not in DUVIDA_OPCOES:
+        duvida = DUVIDA_OPCOES[0]
+    db = SessionLocal()
+    try:
+        obj = db.get(Ligacao, ligacao_id)
+        if not obj:
+            raise HTTPException(status_code=404, detail="Registro não encontrado")
+
+        obj.cro = cro.strip()
+        obj.nome_inscrito = nome_inscrito.strip()
+        obj.duvida = duvida.strip()
+        obj.observacao = (observacao or "").strip()
+
+        db.add(obj)
         db.commit()
     finally:
         db.close()
@@ -172,7 +218,6 @@ def stats_por_duvida():
 def stats_por_dia():
     db = SessionLocal()
     try:
-        # Buscamos todos os timestamps e agrupamos em Python pelo dia no fuso de SP/RS.
         rows = db.query(Ligacao.created_at).all()
         counts_by_day = {}
         for (dt,) in rows:
