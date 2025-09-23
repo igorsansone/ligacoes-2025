@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, Cookie
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -34,6 +34,14 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 class Base(DeclarativeBase):
     pass
 
+class Usuario(Base):
+    __tablename__ = "usuarios"
+    id = Column(Integer, primary_key=True, index=True)
+    nome_completo = Column(String(255), nullable=False)
+    username = Column(String(100), unique=True, nullable=False)
+    password = Column(String(20), nullable=False)  # dd/mm/yyyy format
+    data_nascimento = Column(String(10), nullable=False)  # dd/mm/yyyy format
+
 class Ligacao(Base):
     __tablename__ = "ligacoes"
     id = Column(Integer, primary_key=True, index=True)
@@ -41,12 +49,13 @@ class Ligacao(Base):
     nome_inscrito = Column(String(255), nullable=False)
     duvida = Column(String(100), nullable=False)
     observacao = Column(String(1000), nullable=True)
+    attendant_username = Column(String(100), nullable=True)  # New field
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 # Cria tabela se não existir
 Base.metadata.create_all(bind=engine)
 
-# MIGRAÇÃO LEVE: adiciona coluna 'observacao' se faltar
+# MIGRAÇÃO LEVE: adiciona colunas que faltam
 insp = inspect(engine)
 cols = [c["name"] for c in insp.get_columns("ligacoes")]
 if "observacao" not in cols:
@@ -55,6 +64,13 @@ if "observacao" not in cols:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN observacao VARCHAR(1000)"))
         else:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN observacao VARCHAR(1000) NULL"))
+
+if "attendant_username" not in cols:
+    with engine.begin() as conn:
+        if DATABASE_URL.startswith("sqlite"):
+            conn.execute(text("ALTER TABLE ligacoes ADD COLUMN attendant_username VARCHAR(100)"))
+        else:
+            conn.execute(text("ALTER TABLE ligacoes ADD COLUMN attendant_username VARCHAR(100) NULL"))
 
 DUVIDA_OPCOES = [
     "Dúvida sanada - Profissional apto ao voto",
@@ -65,6 +81,52 @@ DUVIDA_OPCOES = [
     "Dúvida sanada - Profissional não apto ao voto (-60 dias)",
     "Dúvida sanada - Profissional não apto ao voto (militar exclusivo)",
 ]
+
+# Predefined users - expandir conforme a imagem mencionada
+USUARIOS_PREDEFINIDOS = [
+    {
+        "nome_completo": "Igor Ricardo de Souza Sansone",
+        "data_nascimento": "15/03/1985"  # Exemplo - ajustar conforme dados reais
+    },
+    {
+        "nome_completo": "Maria Silva Santos",
+        "data_nascimento": "10/07/1990"  # Usuário de teste não-master
+    },
+    # Adicionar outros usuários conforme a imagem
+]
+
+def generate_username(nome_completo):
+    """Gera username: primeiro nome + último sobrenome (lowercase, sem espaços)"""
+    partes = nome_completo.strip().split()
+    if len(partes) < 2:
+        return partes[0].lower().replace(" ", "")
+    primeiro_nome = partes[0]
+    ultimo_sobrenome = partes[-1]
+    return f"{primeiro_nome}{ultimo_sobrenome}".lower().replace(" ", "")
+
+def create_predefined_users():
+    """Cria usuários predefinidos se não existirem"""
+    db = SessionLocal()
+    try:
+        for user_data in USUARIOS_PREDEFINIDOS:
+            username = generate_username(user_data["nome_completo"])
+            existing = db.query(Usuario).filter(Usuario.username == username).first()
+            if not existing:
+                novo_usuario = Usuario(
+                    nome_completo=user_data["nome_completo"],
+                    username=username,
+                    password=user_data["data_nascimento"],
+                    data_nascimento=user_data["data_nascimento"]
+                )
+                db.add(novo_usuario)
+        db.commit()
+    finally:
+        db.close()
+
+# Criar usuários predefinidos
+create_predefined_users()
+
+MASTER_USER = "igorsansone"  # Master user com privilégios especiais
 
 # Garante que as pastas existam no runtime
 os.makedirs("static", exist_ok=True)
@@ -90,9 +152,50 @@ def format_sp(dt):
     dt_sp = to_sp(dt)
     return dt_sp.strftime("%d/%m/%Y %H:%M") if dt_sp else "-"
 
+# Authentication helpers
+def get_current_user(session_token: str = Cookie(None)):
+    """Recupera o usuário atual da sessão"""
+    if not session_token:
+        return None
+    
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter(Usuario.username == session_token).first()
+        return usuario
+    finally:
+        db.close()
+
+def authenticate_user(username: str, password: str):
+    """Autentica usuário com username/password"""
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter(
+            Usuario.username == username,
+            Usuario.password == password
+        ).first()
+        return usuario
+    finally:
+        db.close()
+
+def require_authentication(current_user = Depends(get_current_user)):
+    """Dependência para exigir autenticação"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Usuário não autenticado")
+    return current_user
+
+def require_master_user(current_user = Depends(require_authentication)):
+    """Dependência para exigir usuário master"""
+    if current_user.username != MASTER_USER:
+        raise HTTPException(status_code=403, detail="Acesso restrito ao usuário master")
+    return current_user
+
 # Página inicial: formulário e lista
 @app.get("/")
-def home(request: Request):
+def home(request: Request, current_user = Depends(get_current_user)):
+    # Redirecionar para login se não autenticado
+    if not current_user:
+        return RedirectResponse("/login", status_code=303)
+        
     db = SessionLocal()
     try:
         ligacoes = db.query(Ligacao).order_by(Ligacao.id.desc()).limit(50).all()
@@ -105,8 +208,44 @@ def home(request: Request):
             "duvida_opcoes": DUVIDA_OPCOES,
             "ligacoes": ligacoes,
             "format_sp": format_sp,
+            "current_user": current_user,
+            "is_master": current_user.username == MASTER_USER,
         },
     )
+
+# Login page
+@app.get("/login")
+def login_form(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+# Login submission
+@app.post("/login")
+def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    user = authenticate_user(username, password)
+    if not user:
+        return templates.TemplateResponse(
+            "login.html", 
+            {
+                "request": request, 
+                "error": "Usuário ou senha inválidos"
+            }
+        )
+    
+    # Set session cookie and redirect
+    response = RedirectResponse("/", status_code=303)
+    response.set_cookie(key="session_token", value=user.username, httponly=True)
+    return response
+
+# Logout
+@app.post("/logout")
+def logout():
+    response = RedirectResponse("/login", status_code=303)
+    response.delete_cookie(key="session_token")
+    return response
 
 # Cadastrar ligação
 @app.post("/cadastrar")
@@ -115,6 +254,7 @@ def cadastrar(
     nome_inscrito: str = Form(...),
     duvida: str = Form(...),
     observacao: str = Form(""),
+    current_user = Depends(require_authentication),
 ):
     if duvida not in DUVIDA_OPCOES:
         duvida = DUVIDA_OPCOES[0]
@@ -125,6 +265,7 @@ def cadastrar(
             nome_inscrito=nome_inscrito.strip(),
             duvida=duvida.strip(),
             observacao=(observacao or "").strip(),
+            attendant_username=current_user.username,
             created_at=datetime.now(timezone.utc),
         )
         db.add(novo)
@@ -135,7 +276,7 @@ def cadastrar(
 
 # --- EDITAR (GET): formulário preenchido
 @app.get("/editar/{ligacao_id}")
-def editar_form(request: Request, ligacao_id: int):
+def editar_form(request: Request, ligacao_id: int, current_user = Depends(require_master_user)):
     db = SessionLocal()
     try:
         obj = db.get(Ligacao, ligacao_id)
@@ -150,6 +291,7 @@ def editar_form(request: Request, ligacao_id: int):
             "ligacao": obj,
             "duvida_opcoes": DUVIDA_OPCOES,
             "format_sp": format_sp,
+            "current_user": current_user,
         },
     )
 
@@ -161,6 +303,7 @@ def editar_submit(
     nome_inscrito: str = Form(...),
     duvida: str = Form(...),
     observacao: str = Form(""),
+    current_user = Depends(require_master_user),
 ):
     if duvida not in DUVIDA_OPCOES:
         duvida = DUVIDA_OPCOES[0]
@@ -183,7 +326,7 @@ def editar_submit(
 
 # EXCLUIR ligação
 @app.post("/excluir/{ligacao_id}")
-def excluir(ligacao_id: int):
+def excluir(ligacao_id: int, current_user = Depends(require_master_user)):
     db = SessionLocal()
     try:
         obj = db.get(Ligacao, ligacao_id)
@@ -200,11 +343,12 @@ def excluir(ligacao_id: int):
 
 # Relatórios (página com gráficos e botão de impressão)
 @app.get("/relatorios")
-def relatorios(request: Request):
+def relatorios(request: Request, current_user = Depends(require_authentication)):
     # agora mandamos as opções para montar o filtro no template
     return templates.TemplateResponse("relatorios.html", {
         "request": request,
         "duvida_opcoes": DUVIDA_OPCOES,
+        "current_user": current_user,
     })
 
 def _parse_date(s: str):

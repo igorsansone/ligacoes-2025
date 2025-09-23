@@ -49,8 +49,11 @@
                 <th>Nome</th>
                 <th>Dúvida</th>
                 <th>Observação</th>
+                <th>Atendente</th>
                 <th>Data/Hora</th>
+                {% if is_master %}
                 <th class="text-end">Ações</th>
+                {% endif %}
               </tr>
             </thead>
             <tbody>
@@ -63,17 +66,20 @@
                 <td style="max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ l.observacao or '' }}">
                   {{ (l.observacao or '') }}
                 </td>
+                <td>{{ l.attendant_username or '-' }}</td>
                 <td>{{ format_sp(l.created_at) }}</td>
+                {% if is_master %}
                 <td class="text-end">
                   <a href="/editar/{{ l.id }}" class="btn btn-sm btn-outline-primary me-1">Editar</a>
                   <form method="post" action="/excluir/{{ l.id }}" onsubmit="return confirm('Excluir a ligação #{{ l.id }}?');" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
                   </form>
                 </td>
+                {% endif %}
               </tr>
               {% else %}
               <tr>
-                <td colspan="7" class="text-muted">Nenhum registro ainda.</td>
+                <td colspan="{% if is_master %}8{% else %}7{% endif %}" class="text-muted">Nenhum registro ainda.</td>
               </tr>
               {% endfor %}
             </tbody>

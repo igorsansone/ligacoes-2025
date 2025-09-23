@@ -32,9 +32,17 @@
           <img src="/static/logo-crors.png" alt="CRO/RS" class="brand-logo" onerror="this.style.display='none'">
           <span>ELEIÇÕES CRORS - 2025</span>
         </a>
-        <div class="d-flex gap-2">
-          <a class="btn btn-outline-primary" href="/">Cadastro</a>
-          <a class="btn btn-primary" href="/relatorios">Relatórios</a>
+        <div class="d-flex gap-2 align-items-center">
+          {% if current_user %}
+            <small class="text-muted me-3">Logado como: <strong>{{ current_user.nome_completo }}</strong></small>
+            <a class="btn btn-outline-primary" href="/">Cadastro</a>
+            <a class="btn btn-primary" href="/relatorios">Relatórios</a>
+            <form method="post" action="/logout" class="d-inline">
+              <button type="submit" class="btn btn-outline-secondary">Sair</button>
+            </form>
+          {% else %}
+            <span class="text-muted">Sistema de Autenticação</span>
+          {% endif %}
         </div>
       </div>
     </nav>

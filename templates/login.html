@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title text-center mb-4">Usuário e senha</h5>
+        
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+          {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="post" action="/login" class="vstack gap-3">
+          <div>
+            <label class="form-label fw-semibold">Usuário</label>
+            <input type="text" name="username" class="form-control" 
+                   placeholder="Ex.: igorsansone" required>
+            <div class="form-text">
+              Usuário é formado pelo primeiro nome + último sobrenome (minúsculas, sem espaços)
+            </div>
+          </div>
+          
+          <div>
+            <label class="form-label fw-semibold">Senha</label>
+            <input type="password" name="password" class="form-control" 
+                   placeholder="dd/mm/aaaa" required>
+            <div class="form-text">
+              Senha é sua data de nascimento no formato dd/mm/aaaa
+            </div>
+          </div>
+          
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Entrar</button>
+          </div>
+        </form>
+        
+        <div class="mt-4 text-center text-muted">
+          <small>
+            Sistema de Eleições CRO/RS - 2025<br>
+            Entre com suas credenciais para acessar o sistema
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
