@@ -95,17 +95,78 @@ def format_sp(dt):
 SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
 SESSION_COOKIE_NAME = "session_token"
 
-# Credenciais fixas (podem ser alteradas depois)
-VALID_USERNAME = "admin"
-VALID_PASSWORD = "senha123"
+# Geração automática de usuários e senhas a partir da lista de colaboradores
+def generate_users():
+    """Gera dicionário de usuários a partir da lista de colaboradores"""
+    colaboradores = [
+        ("André Nunes Flores", "13/05/1983"),
+        ("Andréia Carla Viezzer", "08/06/1973"),
+        ("Andressa Trápaga Paiz", "11/02/1990"),
+        ("Bianca Carvalho Aguilar", "19/12/1997"),
+        ("Carina Reis Silveira", "02/01/1978"),
+        ("Carlos Edvan Carvalho Duarte", "16/04/2001"),
+        ("Clarissa da Costa Barcellos", "16/11/1987"),
+        ("Cleonice Lourenço Guimarães Muller", "14/09/1961"),
+        ("Cristiano Grimaldi Boff", "17/03/1983"),
+        ("Daniel José Bahi Aymone", "02/05/1979"),
+        ("Giovanna de Castro Bonamigo", "30/08/1994"),
+        ("Gustavo Rodrigues Graminho", "14/06/1990"),
+        ("Gustavo Santos de Barros", "03/05/2003"),
+        ("Igor Ricardo de Souza Sansone", "30/10/1987"),
+        ("Jefferson Rocho Barth", "15/10/1985"),
+        ("João Francisco Schmidt", "11/07/1964"),
+        ("João Paulo Melo de Carvalho", "24/12/1980"),
+        ("Jorge Miguel Chaves", "01/02/1958"),
+        ("Leandro Oscar Collares da Silva", "12/09/1978"),
+        ("Leonardo Carvalho da Rosa", "31/05/1984"),
+        ("Leticia Pereira Voltz Alfaro", "16/02/1973"),
+        ("Liliane Correa Bruno", "10/06/1984"),
+        ("Luciano Dichel", "26/08/1981"),
+        ("Luiza Gutheil Bayer", "19/07/1993"),
+        ("Matheus Prato da Silva", "09/09/1998"),
+        ("Marilda Zanella Busanello", "06/07/1963"),
+        ("Rodrigo Fernandes Floriano", "29/07/1978"),
+        ("Tânia Marli Mendes Leite", "19/08/1962"),
+        ("Tanise Barbosa Ramaswami", "15/08/1991"),
+        ("Tatiana de Carli da Silva", "04/05/1974"),
+        ("Tatiana Nuñez Rosa", "13/08/1979"),
+        ("Willians da Silva Marks", "22/10/1983"),
+    ]
+    
+    users = {}
+    for nome, nascimento in colaboradores:
+        # Gerar usuário: primeiro nome + último sobrenome (minúsculo, sem acento, sem espaço)
+        partes_nome = nome.split()
+        primeiro_nome = partes_nome[0]
+        ultimo_sobrenome = partes_nome[-1]
+        
+        # Remover acentos e converter para minúsculo
+        import unicodedata
+        def remove_accents(s):
+            return ''.join(c for c in unicodedata.normalize('NFD', s) 
+                          if unicodedata.category(c) != 'Mn')
+        
+        usuario = remove_accents(f"{primeiro_nome}{ultimo_sobrenome}").lower()
+        
+        # Gerar senha: data de nascimento no formato ddmmaaaa
+        dia, mes, ano = nascimento.split('/')
+        senha = f"{dia}{mes}{ano}"
+        
+        users[usuario] = senha
+    
+    return users
+
+# Dicionário de usuários válidos
+VALID_USERS = generate_users()
 
 # Sessions ativas (em memória - em produção usar Redis/Database)
-active_sessions = set()
+# Estrutura: {token: {'username': 'usuario'}}
+active_sessions = {}
 
-def create_session() -> str:
+def create_session(username: str) -> str:
     """Cria uma nova sessão e retorna o token"""
     token = secrets.token_urlsafe(32)
-    active_sessions.add(token)
+    active_sessions[token] = {'username': username}
     return token
 
 def is_valid_session(token: str) -> bool:  
@@ -114,13 +175,13 @@ def is_valid_session(token: str) -> bool:
 
 def invalidate_session(token: str):
     """Invalida uma sessão"""
-    active_sessions.discard(token)
+    active_sessions.pop(token, None)
 
 def get_current_user(session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
     """Dependency para verificar autenticação"""
     if not session_token or not is_valid_session(session_token):
         return None
-    return {"username": VALID_USERNAME}
+    return active_sessions[session_token]
 
 def require_auth(session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
     """Dependency que requer autenticação"""
@@ -142,9 +203,9 @@ def login_submit(
     username: str = Form(...),
     password: str = Form(...),
 ):
-    if username == VALID_USERNAME and password == VALID_PASSWORD:
-        # Criar sessão
-        token = create_session()
+    if username in VALID_USERS and VALID_USERS[username] == password:
+        # Criar sessão com o usuário logado
+        token = create_session(username)
         response = RedirectResponse("/", status_code=302)
         response.set_cookie(
             key=SESSION_COOKIE_NAME,
