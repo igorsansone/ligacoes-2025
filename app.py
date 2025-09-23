@@ -42,6 +42,7 @@ class Ligacao(Base):
     nome_inscrito = Column(String(255), nullable=False)
     duvida = Column(String(100), nullable=False)
     observacao = Column(String(1000), nullable=True)
+    atendente = Column(String(100), nullable=True)  # Nome do atendente que registrou
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 # Cria tabela se não existir
@@ -56,6 +57,14 @@ if "observacao" not in cols:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN observacao VARCHAR(1000)"))
         else:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN observacao VARCHAR(1000) NULL"))
+
+# MIGRAÇÃO LEVE: adiciona coluna 'atendente' se faltar            
+if "atendente" not in cols:
+    with engine.begin() as conn:
+        if DATABASE_URL.startswith("sqlite"):
+            conn.execute(text("ALTER TABLE ligacoes ADD COLUMN atendente VARCHAR(100)"))
+        else:
+            conn.execute(text("ALTER TABLE ligacoes ADD COLUMN atendente VARCHAR(100) NULL"))
 
 DUVIDA_OPCOES = [
     "Dúvida sanada - Profissional apto ao voto",
@@ -159,6 +168,72 @@ def generate_users():
 # Dicionário de usuários válidos
 VALID_USERS = generate_users()
 
+# Mapear username para nome completo
+USERNAME_TO_FULLNAME = {}
+def generate_username_map():
+    """Mapeia username para nome completo"""
+    colaboradores = [
+        ("André Nunes Flores", "13/05/1983"),
+        ("Andréia Carla Viezzer", "08/06/1973"),
+        ("Andressa Trápaga Paiz", "11/02/1990"),
+        ("Bianca Carvalho Aguilar", "19/12/1997"),
+        ("Carina Reis Silveira", "02/01/1978"),
+        ("Carlos Edvan Carvalho Duarte", "16/04/2001"),
+        ("Clarissa da Costa Barcellos", "16/11/1987"),
+        ("Cleonice Lourenço Guimarães Muller", "14/09/1961"),
+        ("Cristiano Grimaldi Boff", "17/03/1983"),
+        ("Daniel José Bahi Aymone", "02/05/1979"),
+        ("Giovanna de Castro Bonamigo", "30/08/1994"),
+        ("Gustavo Rodrigues Graminho", "14/06/1990"),
+        ("Gustavo Santos de Barros", "03/05/2003"),
+        ("Igor Ricardo de Souza Sansone", "30/10/1987"),
+        ("Jefferson Rocho Barth", "15/10/1985"),
+        ("João Francisco Schmidt", "11/07/1964"),
+        ("João Paulo Melo de Carvalho", "24/12/1980"),
+        ("Jorge Miguel Chaves", "01/02/1958"),
+        ("Leandro Oscar Collares da Silva", "12/09/1978"),
+        ("Leonardo Carvalho da Rosa", "31/05/1984"),
+        ("Leticia Pereira Voltz Alfaro", "16/02/1973"),
+        ("Liliane Correa Bruno", "10/06/1984"),
+        ("Luciano Dichel", "26/08/1981"),
+        ("Luiza Gutheil Bayer", "19/07/1993"),
+        ("Matheus Prato da Silva", "09/09/1998"),
+        ("Marilda Zanella Busanello", "06/07/1963"),
+        ("Rodrigo Fernandes Floriano", "29/07/1978"),
+        ("Tânia Marli Mendes Leite", "19/08/1962"),
+        ("Tanise Barbosa Ramaswami", "15/08/1991"),
+        ("Tatiana de Carli da Silva", "04/05/1974"),
+        ("Tatiana Nuñez Rosa", "13/08/1979"),
+        ("Willians da Silva Marks", "22/10/1983"),
+    ]
+    
+    username_map = {}
+    for nome, nascimento in colaboradores:
+        # Gerar username igual ao da função generate_users
+        partes_nome = nome.split()
+        primeiro_nome = partes_nome[0]
+        ultimo_sobrenome = partes_nome[-1]
+        
+        import unicodedata
+        def remove_accents(s):
+            return ''.join(c for c in unicodedata.normalize('NFD', s) 
+                          if unicodedata.category(c) != 'Mn')
+        
+        usuario = remove_accents(f"{primeiro_nome}{ultimo_sobrenome}").lower()
+        username_map[usuario] = nome
+    
+    return username_map
+
+USERNAME_TO_FULLNAME = generate_username_map()
+
+def get_user_full_name(username: str) -> str:
+    """Retorna o nome completo do usuário"""
+    return USERNAME_TO_FULLNAME.get(username, username)
+
+def can_edit_delete(username: str) -> bool:
+    """Verifica se o usuário pode editar/excluir registros"""
+    return username == "igorsansone"
+
 # Sessions ativas (em memória - em produção usar Redis/Database)
 # Estrutura: {token: {'username': 'usuario'}}
 active_sessions = {}
@@ -238,6 +313,10 @@ def home(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKI
     if not session_token or not is_valid_session(session_token):
         return RedirectResponse("/login", status_code=302)
     
+    # Obter usuário atual
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    
     db = SessionLocal()
     try:
         ligacoes = db.query(Ligacao).order_by(Ligacao.id.desc()).limit(50).all()
@@ -250,6 +329,10 @@ def home(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKI
             "duvida_opcoes": DUVIDA_OPCOES,
             "ligacoes": ligacoes,
             "format_sp": format_sp,
+            "current_user": current_user,
+            "current_username": current_username,
+            "current_user_fullname": get_user_full_name(current_username),
+            "can_edit_delete": can_edit_delete(current_username),
         },
     )
 
@@ -266,6 +349,11 @@ def cadastrar(
     if not session_token or not is_valid_session(session_token):
         return RedirectResponse("/login", status_code=302)
     
+    # Obter usuário atual
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    attendant_name = get_user_full_name(current_username)
+    
     if duvida not in DUVIDA_OPCOES:
         duvida = DUVIDA_OPCOES[0]
     db = SessionLocal()
@@ -275,6 +363,7 @@ def cadastrar(
             nome_inscrito=nome_inscrito.strip(),
             duvida=duvida.strip(),
             observacao=(observacao or "").strip(),
+            atendente=attendant_name,
             created_at=datetime.now(timezone.utc),
         )
         db.add(novo)
@@ -290,6 +379,12 @@ def editar_form(request: Request, ligacao_id: int, session_token: str = Cookie(N
     if not session_token or not is_valid_session(session_token):
         return RedirectResponse("/login", status_code=302)
     
+    # Verificar permissão para editar
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    if not can_edit_delete(current_username):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
     db = SessionLocal()
     try:
         obj = db.get(Ligacao, ligacao_id)
@@ -304,6 +399,9 @@ def editar_form(request: Request, ligacao_id: int, session_token: str = Cookie(N
             "ligacao": obj,
             "duvida_opcoes": DUVIDA_OPCOES,
             "format_sp": format_sp,
+            "current_user": current_user,
+            "current_username": current_username,
+            "current_user_fullname": get_user_full_name(current_username),
         },
     )
 
@@ -320,6 +418,12 @@ def editar_submit(
     # Verificar autenticação
     if not session_token or not is_valid_session(session_token):
         return RedirectResponse("/login", status_code=302)
+    
+    # Verificar permissão para editar
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    if not can_edit_delete(current_username):
+        raise HTTPException(status_code=403, detail="Acesso negado")
     
     if duvida not in DUVIDA_OPCOES:
         duvida = DUVIDA_OPCOES[0]
@@ -347,6 +451,12 @@ def excluir(ligacao_id: int, session_token: str = Cookie(None, alias=SESSION_COO
     if not session_token or not is_valid_session(session_token):
         return RedirectResponse("/login", status_code=302)
     
+    # Verificar permissão para excluir
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    if not can_edit_delete(current_username):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
     db = SessionLocal()
     try:
         obj = db.get(Ligacao, ligacao_id)
@@ -368,10 +478,17 @@ def relatorios(request: Request, session_token: str = Cookie(None, alias=SESSION
     if not session_token or not is_valid_session(session_token):
         return RedirectResponse("/login", status_code=302)
     
+    # Obter usuário atual
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    
     # agora mandamos as opções para montar o filtro no template
     return templates.TemplateResponse("relatorios.html", {
         "request": request,
         "duvida_opcoes": DUVIDA_OPCOES,
+        "current_user": current_user,
+        "current_username": current_username,
+        "current_user_fullname": get_user_full_name(current_username),
     })
 
 def _parse_date(s: str):
