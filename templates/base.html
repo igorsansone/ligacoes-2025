@@ -37,6 +37,9 @@
             <small class="text-muted me-3">Logado como: <strong>{{ current_user.nome_completo }}</strong></small>
             <a class="btn btn-outline-primary" href="/">Cadastro</a>
             <a class="btn btn-primary" href="/relatorios">Relatórios</a>
+            {% if current_user.username == 'igorsansone' %}
+            <a class="btn btn-outline-info" href="/admin/usuarios">Usuários</a>
+            {% endif %}
             <form method="post" action="/logout" class="d-inline">
               <button type="submit" class="btn btn-outline-secondary">Sair</button>
             </form>

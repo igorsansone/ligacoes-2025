@@ -247,6 +247,20 @@ def logout():
     response.delete_cookie(key="session_token")
     return response
 
+# Admin: List users (master only)
+@app.get("/admin/usuarios")
+def admin_usuarios(request: Request, current_user = Depends(require_master_user)):
+    db = SessionLocal()
+    try:
+        usuarios = db.query(Usuario).order_by(Usuario.nome_completo).all()
+    finally:
+        db.close()
+    return templates.TemplateResponse("admin_usuarios.html", {
+        "request": request,
+        "usuarios": usuarios,
+        "current_user": current_user,
+    })
+
 # Cadastrar ligação
 @app.post("/cadastrar")
 def cadastrar(

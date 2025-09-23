@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="card-title mb-0">Gerenciar Usuários</h5>
+          <small class="text-muted">Acesso restrito ao usuário master</small>
+        </div>
+        
+        <div class="alert alert-info" role="alert">
+          <strong>Informações:</strong><br>
+          • Usuários são criados automaticamente na inicialização do sistema<br>
+          • Username: primeiro nome + último sobrenome (minúsculas, sem espaços)<br>
+          • Senha: data de nascimento no formato dd/mm/aaaa<br>
+          • Apenas o usuário master ({{ current_user.username }}) pode editar/excluir ligações
+        </div>
+        
+        <div class="table-responsive">
+          <table class="table table-striped align-middle">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nome Completo</th>
+                <th>Username</th>
+                <th>Data Nascimento</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for usuario in usuarios %}
+              <tr>
+                <td>{{ usuario.id }}</td>
+                <td>{{ usuario.nome_completo }}</td>
+                <td>
+                  <code>{{ usuario.username }}</code>
+                  {% if usuario.username == 'igorsansone' %}
+                  <span class="badge bg-success ms-2">Master</span>
+                  {% endif %}
+                </td>
+                <td>{{ usuario.data_nascimento }}</td>
+                <td>
+                  {% if usuario.username == 'igorsansone' %}
+                  <span class="text-success fw-bold">Administrador</span>
+                  {% else %}
+                  <span class="text-muted">Usuário Padrão</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="mt-4">
+          <a href="/" class="btn btn-outline-secondary">← Voltar ao Sistema</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
