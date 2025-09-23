@@ -1,8 +1,9 @@
 import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+import secrets
 
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, Cookie
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -90,9 +91,92 @@ def format_sp(dt):
     dt_sp = to_sp(dt)
     return dt_sp.strftime("%d/%m/%Y %H:%M") if dt_sp else "-"
 
+# Autenticação
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
+SESSION_COOKIE_NAME = "session_token"
+
+# Credenciais fixas (podem ser alteradas depois)
+VALID_USERNAME = "admin"
+VALID_PASSWORD = "senha123"
+
+# Sessions ativas (em memória - em produção usar Redis/Database)
+active_sessions = set()
+
+def create_session() -> str:
+    """Cria uma nova sessão e retorna o token"""
+    token = secrets.token_urlsafe(32)
+    active_sessions.add(token)
+    return token
+
+def is_valid_session(token: str) -> bool:  
+    """Verifica se a sessão é válida"""
+    return token in active_sessions
+
+def invalidate_session(token: str):
+    """Invalida uma sessão"""
+    active_sessions.discard(token)
+
+def get_current_user(session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    """Dependency para verificar autenticação"""
+    if not session_token or not is_valid_session(session_token):
+        return None
+    return {"username": VALID_USERNAME}
+
+def require_auth(session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    """Dependency que requer autenticação"""
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+
+# Rotas de autenticação
+@app.get("/login")
+def login_form(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    # Se já estiver logado, redireciona para home
+    if session_token and is_valid_session(session_token):
+        return RedirectResponse("/", status_code=302)
+    
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.post("/login")
+def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    if username == VALID_USERNAME and password == VALID_PASSWORD:
+        # Criar sessão
+        token = create_session()
+        response = RedirectResponse("/", status_code=302)
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=token,
+            httponly=True,
+            secure=False,  # Para desenvolvimento local
+            samesite="lax"
+        )
+        return response
+    else:
+        # Credenciais inválidas
+        return templates.TemplateResponse(
+            "login.html", 
+            {"request": request, "error": "Usuário ou senha incorretos"}
+        )
+
+@app.post("/logout")
+def logout(session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    if session_token:
+        invalidate_session(session_token)
+    
+    response = RedirectResponse("/login", status_code=302)
+    response.delete_cookie(key=SESSION_COOKIE_NAME)
+    return response
+
 # Página inicial: formulário e lista
 @app.get("/")
-def home(request: Request):
+def home(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+    
     db = SessionLocal()
     try:
         ligacoes = db.query(Ligacao).order_by(Ligacao.id.desc()).limit(50).all()
@@ -115,7 +199,12 @@ def cadastrar(
     nome_inscrito: str = Form(...),
     duvida: str = Form(...),
     observacao: str = Form(""),
+    session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME),
 ):
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+    
     if duvida not in DUVIDA_OPCOES:
         duvida = DUVIDA_OPCOES[0]
     db = SessionLocal()
@@ -135,7 +224,11 @@ def cadastrar(
 
 # --- EDITAR (GET): formulário preenchido
 @app.get("/editar/{ligacao_id}")
-def editar_form(request: Request, ligacao_id: int):
+def editar_form(request: Request, ligacao_id: int, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    # Verificar autenticação  
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+    
     db = SessionLocal()
     try:
         obj = db.get(Ligacao, ligacao_id)
@@ -161,7 +254,12 @@ def editar_submit(
     nome_inscrito: str = Form(...),
     duvida: str = Form(...),
     observacao: str = Form(""),
+    session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME),
 ):
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+    
     if duvida not in DUVIDA_OPCOES:
         duvida = DUVIDA_OPCOES[0]
     db = SessionLocal()
@@ -183,7 +281,11 @@ def editar_submit(
 
 # EXCLUIR ligação
 @app.post("/excluir/{ligacao_id}")
-def excluir(ligacao_id: int):
+def excluir(ligacao_id: int, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+    
     db = SessionLocal()
     try:
         obj = db.get(Ligacao, ligacao_id)
@@ -200,7 +302,11 @@ def excluir(ligacao_id: int):
 
 # Relatórios (página com gráficos e botão de impressão)
 @app.get("/relatorios")
-def relatorios(request: Request):
+def relatorios(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+    
     # agora mandamos as opções para montar o filtro no template
     return templates.TemplateResponse("relatorios.html", {
         "request": request,
@@ -244,7 +350,11 @@ def _filter_rows(rows, start_date, end_date, tipos):
 
 # API: estatística por dúvida (com filtros)
 @app.get("/api/stats/por_duvida")
-def stats_por_duvida(request: Request):
+def stats_por_duvida(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        raise HTTPException(status_code=401, detail="Não autorizado")
+    
     # Query params: start=YYYY-MM-DD, end=YYYY-MM-DD, tipos=csv
     start = _parse_date(request.query_params.get("start"))
     end = _parse_date(request.query_params.get("end"))
@@ -272,7 +382,11 @@ def stats_por_duvida(request: Request):
 
 # API: estatística por dia (com filtros e fuso BR)
 @app.get("/api/stats/por_dia")
-def stats_por_dia(request: Request):
+def stats_por_dia(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        raise HTTPException(status_code=401, detail="Não autorizado")
+    
     start = _parse_date(request.query_params.get("start"))
     end = _parse_date(request.query_params.get("end"))
     tipos_raw = request.query_params.get("tipos", "")
