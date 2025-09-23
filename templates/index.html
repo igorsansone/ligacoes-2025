@@ -1,10 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- CRO Logo Section -->
+<div class="row mb-4">
+  <div class="col-12 text-center">
+    <div class="py-4 bg-white rounded shadow-sm border">
+      <img src="/static/logo-crors.png" alt="Conselho Regional de Odontologia do Rio Grande do Sul" class="img-fluid" style="max-height: 120px; object-fit: contain;" onerror="this.innerHTML='<div class=\'text-primary fw-bold fs-4\'>CRO/RS - ELEIÇÕES 2025</div>'">
+      <div class="mt-2">
+        <h2 class="h4 mb-1 text-primary fw-bold">ELEIÇÕES CRORS - 2025</h2>
+        <p class="text-muted mb-0 small">Sistema de Registro de Ligações</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="row g-4">
   <div class="col-lg-5">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h5 class="card-title mb-3">Cadastrar nova ligação</h5>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="card-title mb-0">Cadastrar nova ligação</h5>
+          <small class="text-muted">{{ current_user_fullname }}</small>
+        </div>
         <form method="post" action="/cadastrar" class="vstack gap-3">
           <div>
             <label class="form-label fw-semibold">CRO</label>
@@ -27,8 +43,12 @@
             <textarea name="observacao" class="form-control" rows="3" placeholder="Opcional: detalhes adicionais"></textarea>
           </div>
           <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-success">Cadastrar ligação</button>
-            <a class="btn btn-outline-secondary" href="/relatorios">Ver relatórios</a>
+            <button type="submit" class="btn btn-success">
+              <i class="fas fa-plus me-1"></i>Cadastrar ligação
+            </button>
+            <a class="btn btn-outline-secondary" href="/relatorios">
+              <i class="fas fa-chart-bar me-1"></i>Ver relatórios
+            </a>
           </div>
           <div class="form-text">A data e a hora são preenchidas automaticamente (fuso: Brasil/RS).</div>
         </form>
@@ -49,8 +69,11 @@
                 <th>Nome</th>
                 <th>Dúvida</th>
                 <th>Observação</th>
+                <th>Atendente</th>
                 <th>Data/Hora</th>
+                {% if can_edit_delete %}
                 <th class="text-end">Ações</th>
+                {% endif %}
               </tr>
             </thead>
             <tbody>
@@ -63,17 +86,20 @@
                 <td style="max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ l.observacao or '' }}">
                   {{ (l.observacao or '') }}
                 </td>
+                <td class="text-muted small">{{ l.atendente or '-' }}</td>
                 <td>{{ format_sp(l.created_at) }}</td>
+                {% if can_edit_delete %}
                 <td class="text-end">
                   <a href="/editar/{{ l.id }}" class="btn btn-sm btn-outline-primary me-1">Editar</a>
                   <form method="post" action="/excluir/{{ l.id }}" onsubmit="return confirm('Excluir a ligação #{{ l.id }}?');" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
                   </form>
                 </td>
+                {% endif %}
               </tr>
               {% else %}
               <tr>
-                <td colspan="7" class="text-muted">Nenhum registro ainda.</td>
+                <td colspan="{% if can_edit_delete %}8{% else %}7{% endif %}" class="text-muted">Nenhum registro ainda.</td>
               </tr>
               {% endfor %}
             </tbody>
