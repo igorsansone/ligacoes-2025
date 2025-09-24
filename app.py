@@ -132,6 +132,7 @@ def generate_users():
         ("Leticia Pereira Voltz", "16/02/1973"),
         ("Liliane Correa Bruno", "10/06/1984"),
         ("Luciano Dichel", "26/08/1981"),
+        ("Luan Santos", "06/12/2006"),
         ("Luiza Gutheil Bayer", "19/07/1993"),
         ("Matheus Prato da Silva", "09/09/1998"),
         ("Marilda Zanella Busanello", "06/07/1963"),
