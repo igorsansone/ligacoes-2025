@@ -128,7 +128,7 @@ def generate_users():
         ("Jorge Miguel Chaves", "01/02/1958"),
         ("Leandro Oscar Collares da Silva", "12/09/1978"),
         ("Leonardo Carvalho da Rosa", "31/05/1984"),
-        ("Leticia Pereira Voltz Alfaro", "16/02/1973"),
+        ("Leticia Pereira Voltz", "16/02/1973"),
         ("Liliane Correa Bruno", "10/06/1984"),
         ("Luciano Dichel", "26/08/1981"),
         ("Luiza Gutheil Bayer", "19/07/1993"),
