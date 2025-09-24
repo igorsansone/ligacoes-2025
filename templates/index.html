@@ -46,9 +46,11 @@
             <button type="submit" class="btn btn-success">
               <i class="fas fa-plus me-1"></i>Cadastrar ligação
             </button>
+            {% if can_access_reports %}
             <a class="btn btn-outline-secondary" href="/relatorios">
               <i class="fas fa-chart-bar me-1"></i>Ver relatórios
             </a>
+            {% endif %}
           </div>
           <div class="form-text">A data e a hora são preenchidas automaticamente (fuso: Brasil/RS).</div>
         </form>

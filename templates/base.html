@@ -160,7 +160,9 @@
         </a>
         <div class="d-flex gap-2 align-items-center">
           <a class="btn btn-outline-primary" href="/">Cadastro</a>
+          {% if can_access_reports %}
           <a class="btn btn-primary" href="/relatorios">Relatórios</a>
+          {% endif %}
           {% if current_user_fullname %}
           <span class="text-muted fw-medium d-none d-md-inline">{{ current_user_fullname }}</span>
           {% endif %}
