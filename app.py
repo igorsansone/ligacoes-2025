@@ -142,6 +142,7 @@ def generate_users():
         ("Tanise Barbosa Ramaswami", "15/08/1991"),
         ("Tatiana de Carli da Silva", "04/05/1974"),
         ("Tatiana Nuñez Rosa", "13/08/1979"),
+        ("Suzana kalil", "29/03/2005"),
         ("Willians da Silva Marks", "22/10/1983"),
     ]
     
