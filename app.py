@@ -234,6 +234,10 @@ def can_edit_delete(username: str) -> bool:
     """Verifica se o usuário pode editar/excluir registros"""
     return username == "igorsansone"
 
+def can_access_reports(username: str) -> bool:
+    """Verifica se o usuário pode acessar relatórios"""
+    return username == "igorsansone"
+
 # Sessions ativas (em memória - em produção usar Redis/Database)
 # Estrutura: {token: {'username': 'usuario'}}
 active_sessions = {}
@@ -333,6 +337,7 @@ def home(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKI
             "current_username": current_username,
             "current_user_fullname": get_user_full_name(current_username),
             "can_edit_delete": can_edit_delete(current_username),
+            "can_access_reports": can_access_reports(current_username),
         },
     )
 
@@ -402,6 +407,7 @@ def editar_form(request: Request, ligacao_id: int, session_token: str = Cookie(N
             "current_user": current_user,
             "current_username": current_username,
             "current_user_fullname": get_user_full_name(current_username),
+            "can_access_reports": can_access_reports(current_username),
         },
     )
 
@@ -482,6 +488,10 @@ def relatorios(request: Request, session_token: str = Cookie(None, alias=SESSION
     current_user = active_sessions[session_token]
     current_username = current_user['username']
     
+    # Verificar permissão para acessar relatórios
+    if not can_access_reports(current_username):
+        raise HTTPException(status_code=403, detail="Acesso negado - Você não tem permissão para acessar relatórios")
+    
     # agora mandamos as opções para montar o filtro no template
     return templates.TemplateResponse("relatorios.html", {
         "request": request,
@@ -489,6 +499,7 @@ def relatorios(request: Request, session_token: str = Cookie(None, alias=SESSION
         "current_user": current_user,
         "current_username": current_username,
         "current_user_fullname": get_user_full_name(current_username),
+        "can_access_reports": can_access_reports(current_username),
     })
 
 def _parse_date(s: str):
@@ -533,6 +544,12 @@ def stats_por_duvida(request: Request, session_token: str = Cookie(None, alias=S
     if not session_token or not is_valid_session(session_token):
         raise HTTPException(status_code=401, detail="Não autorizado")
     
+    # Verificar permissão para acessar relatórios
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    if not can_access_reports(current_username):
+        raise HTTPException(status_code=403, detail="Acesso negado - Você não tem permissão para acessar relatórios")
+    
     # Query params: start=YYYY-MM-DD, end=YYYY-MM-DD, tipos=csv
     start = _parse_date(request.query_params.get("start"))
     end = _parse_date(request.query_params.get("end"))
@@ -564,6 +581,12 @@ def stats_por_dia(request: Request, session_token: str = Cookie(None, alias=SESS
     # Verificar autenticação
     if not session_token or not is_valid_session(session_token):
         raise HTTPException(status_code=401, detail="Não autorizado")
+    
+    # Verificar permissão para acessar relatórios
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    if not can_access_reports(current_username):
+        raise HTTPException(status_code=403, detail="Acesso negado - Você não tem permissão para acessar relatórios")
     
     start = _parse_date(request.query_params.get("start"))
     end = _parse_date(request.query_params.get("end"))
