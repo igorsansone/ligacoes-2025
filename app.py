@@ -119,6 +119,7 @@ def generate_users():
         ("Cleonice Lourenço Guimarães Muller", "14/09/1961"),
         ("Cristiano Grimaldi Boff", "17/03/1983"),
         ("Daniel José Bahi Aymone", "02/05/1979"),
+        ("Edson Almeida", "21/02/1999"),
         ("Giovanna de Castro Bonamigo", "30/08/1994"),
         ("Gustavo Rodrigues Graminho", "14/06/1990"),
         ("Gustavo Santos de Barros", "03/05/2003"),
