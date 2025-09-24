@@ -139,6 +139,7 @@ def generate_users():
         ("Matheus Prato da Silva", "09/09/1998"),
         ("Marilda Zanella Busanello", "06/07/1963"),
         ("Rodrigo Fernandes Floriano", "29/07/1978"),
+        ("Stephane Antunes", "20/08/1996"),
         ("Tânia Marli Mendes Leite", "19/08/1962"),
         ("Tanise Barbosa Ramaswami", "15/08/1991"),
         ("Tatiana de Carli da Silva", "04/05/1974"),
