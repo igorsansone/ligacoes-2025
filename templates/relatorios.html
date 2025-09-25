@@ -179,9 +179,48 @@
   </div>
 </div>
 
-<!-- Scripts: Chart.js + plugin de Zoom -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
+<!-- Scripts: Chart.js + plugin de Zoom (using alternative CDNs) -->
+<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js" onload="console.log('Chart.js loaded successfully from unpkg')" onerror="loadChartJSFallback()"></script>
+<script src="https://unpkg.com/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js" onload="console.log('Chart.js zoom plugin loaded successfully')" onerror="console.warn('Chart.js zoom plugin failed to load')"></script>
+
+<script>
+function loadChartJSFallback() {
+  console.warn('Chart.js failed to load from unpkg, trying jsdelivr...');
+  const script1 = document.createElement('script');
+  script1.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.js';
+  script1.onload = () => console.log('Chart.js loaded successfully from jsdelivr fallback');
+  script1.onerror = () => {
+    console.error('All Chart.js CDNs failed. Charts will not work.');
+    // Show error message on page
+    document.querySelectorAll('canvas').forEach(canvas => {
+      const container = canvas.parentElement;
+      if (container) {
+        container.innerHTML = '<div class="alert alert-warning">Chart.js library failed to load from CDN. Charts cannot be displayed.</div>';
+      }
+    });
+  };
+  document.head.appendChild(script1);
+
+  const script2 = document.createElement('script');
+  script2.src = 'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js';
+  document.head.appendChild(script2);
+}
+
+// Check if Chart.js is loaded after a short delay
+setTimeout(() => {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is still not defined after loading attempts');
+    document.querySelectorAll('canvas').forEach(canvas => {
+      const container = canvas.parentElement;
+      if (container) {
+        container.innerHTML = '<div class="alert alert-warning">Chart.js library failed to load. Please refresh the page or check your internet connection.</div>';
+      }
+    });
+  } else {
+    console.log('Chart.js is available and ready');
+  }
+}, 2000);
+</script>
 <script>
 const elStart = document.getElementById('fStart');
 const elEnd = document.getElementById('fEnd');
@@ -207,10 +246,49 @@ function pct(value, total) {
 
 let chartDuvida, chartDia;
 
-function destroyChart(c) { if (c) { c.destroy(); } }
+function destroyChart(c) { 
+  if (c && typeof c.destroy === 'function') { 
+    c.destroy(); 
+  } 
+}
+
+function showDataAsTable(canvasId, data, title) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  
+  const container = canvas.parentElement;
+  if (!container) return;
+  
+  // Replace canvas with table
+  let html = `<div class="chart-fallback">
+    <div class="alert alert-info mb-2">
+      <small>📊 Chart.js não disponível - mostrando dados em tabela</small>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-striped">
+        <thead class="table-dark">
+          <tr><th>Item</th><th>Quantidade</th></tr>
+        </thead>
+        <tbody>`;
+  
+  for (let i = 0; i < data.labels.length; i++) {
+    const label = data.labels[i] || 'N/A';
+    const count = data.counts[i] || 0;
+    html += `<tr><td>${label}</td><td><strong>${count}</strong></td></tr>`;
+  }
+  
+  html += `</tbody></table></div></div>`;
+  container.innerHTML = html;
+}
 
 async function loadDuvida() {
   try {
+    if (typeof Chart === 'undefined') {
+      console.error('Chart.js is not loaded - cannot create duvida chart');
+      document.getElementById('totalDuvidas').innerText = 'Chart.js não carregado - recarregue a página';
+      return;
+    }
+    
     const q = buildQuery();
     console.log('Loading duvida chart with params:', q);
     
@@ -291,6 +369,11 @@ function movingAverage(arr, w=7) {
 
 async function loadDia() {
   try {
+    if (typeof Chart === 'undefined') {
+      console.error('Chart.js is not loaded - cannot create dia chart');
+      return;
+    }
+    
     const q = buildQuery();
     console.log('Loading dia chart with params:', q);
     
@@ -391,6 +474,15 @@ async function loadComparativo() {
       return;
     }
 
+    const total = data.total || 0;
+    document.getElementById('totalComparativo').innerText = `Total no período (${data.periodo || periodo}): ${total}`;
+
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded - showing data as table for comparativo chart');
+      showDataAsTable('chartComparativo', data, `Ligações por ${data.periodo || periodo}`);
+      return;
+    }
+
     const ctx = document.getElementById('chartComparativo');
     if (!ctx) {
       console.error('Canvas element chartComparativo not found');
@@ -398,9 +490,6 @@ async function loadComparativo() {
     }
     
     destroyChart(window.chartComparativo);
-
-    const total = data.total || 0;
-    document.getElementById('totalComparativo').innerText = `Total no período (${data.periodo || periodo}): ${total}`;
 
     window.chartComparativo = new Chart(ctx, {
       type: 'bar',
@@ -453,6 +542,23 @@ async function loadHorarios() {
       return;
     }
 
+    const total = data.total || 0;
+    const maxIndex = data.counts.length > 0 ? data.counts.indexOf(Math.max(...data.counts)) : -1;
+    const maxHour = maxIndex >= 0 ? data.labels[maxIndex] : 'N/A';
+    const maxValue = maxIndex >= 0 ? Math.max(...data.counts) : 0;
+    document.getElementById('totalHorarios').innerText = `Total: ${total} | Pico: ${maxHour} (${maxValue} ligações)`;
+
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded - showing data as table for horarios chart');
+      // Filter out hours with 0 calls for cleaner display
+      const filteredData = {
+        labels: data.labels.filter((_, i) => data.counts[i] > 0),
+        counts: data.counts.filter(count => count > 0)
+      };
+      showDataAsTable('chartHorario', filteredData, 'Ligações por hora');
+      return;
+    }
+
     const ctx = document.getElementById('chartHorario');
     if (!ctx) {
       console.error('Canvas element chartHorario not found');
@@ -460,12 +566,6 @@ async function loadHorarios() {
     }
     
     destroyChart(window.chartHorario);
-
-    const total = data.total || 0;
-    const maxIndex = data.counts.length > 0 ? data.counts.indexOf(Math.max(...data.counts)) : -1;
-    const maxHour = maxIndex >= 0 ? data.labels[maxIndex] : 'N/A';
-    const maxValue = maxIndex >= 0 ? Math.max(...data.counts) : 0;
-    document.getElementById('totalHorarios').innerText = `Total: ${total} | Pico: ${maxHour} (${maxValue} ligações)`;
 
     window.chartHorario = new Chart(ctx, {
       type: 'bar',
@@ -518,6 +618,15 @@ async function loadAtendentes() {
       return;
     }
 
+    const total = data.total || 0;
+    document.getElementById('totalAtendentes').innerText = `Total de ligações: ${total}`;
+
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded - showing data as table for atendentes chart');
+      showDataAsTable('chartAtendente', data, 'Ligações por atendente');
+      return;
+    }
+
     const ctx = document.getElementById('chartAtendente');
     if (!ctx) {
       console.error('Canvas element chartAtendente not found');
@@ -525,9 +634,6 @@ async function loadAtendentes() {
     }
     
     destroyChart(window.chartAtendente);
-
-    const total = data.total || 0;
-    document.getElementById('totalAtendentes').innerText = `Total de ligações: ${total}`;
 
     window.chartAtendente = new Chart(ctx, {
       type: window._tipoAtendente || 'bar',
