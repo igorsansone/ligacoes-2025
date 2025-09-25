@@ -91,6 +91,94 @@
   </div>
 </div>
 
+<!-- Novos relatórios -->
+<div class="row g-4 mt-2">
+  <!-- Comparativo por Período -->
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="card-title m-0">Comparativo por Período</h6>
+          <div class="no-print d-flex gap-2">
+            <select id="selPeriodo" class="form-select form-select-sm" style="width: auto;">
+              <option value="dia">Por Dia</option>
+              <option value="semana">Por Semana</option>
+              <option value="mes">Por Mês</option>
+              <option value="ano">Por Ano</option>
+            </select>
+            <button id="btnComparativoDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+          </div>
+        </div>
+        <canvas id="chartComparativo"></canvas>
+        <div class="small text-muted mt-2" id="totalComparativo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pico de Horários -->
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="card-title m-0">Pico de Horários</h6>
+          <div class="no-print d-flex gap-2">
+            <button id="btnHorarioDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+          </div>
+        </div>
+        <canvas id="chartHorario"></canvas>
+        <div class="small text-muted mt-2" id="totalHorarios"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-2">
+  <!-- Por Atendente -->
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="card-title m-0">Ligações por Atendente</h6>
+          <div class="no-print d-flex gap-2">
+            <button id="btnAtendenteBarra" class="btn btn-sm btn-outline-primary">Barra</button>
+            <button id="btnAtendentePizza" class="btn btn-sm btn-outline-primary">Pizza</button>
+            <button id="btnAtendenteDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+          </div>
+        </div>
+        <canvas id="chartAtendente"></canvas>
+        <div class="small text-muted mt-2" id="totalAtendentes"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exportar Dados -->
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Exportar Relatórios</h6>
+        <p class="text-muted small">Exporte os dados filtrados em diferentes formatos</p>
+        
+        <div class="row g-2">
+          <div class="col-6">
+            <h6 class="small">Resumido</h6>
+            <button id="btnExportCSVResumo" class="btn btn-sm btn-outline-success w-100 mb-1">CSV Resumo</button>
+            <button id="btnExportPDFResumo" class="btn btn-sm btn-outline-danger w-100">PDF Resumo</button>
+          </div>
+          <div class="col-6">
+            <h6 class="small">Detalhado</h6>
+            <button id="btnExportCSVDetalhado" class="btn btn-sm btn-outline-success w-100 mb-1">CSV Completo</button>
+            <button id="btnExportPDFDetalhado" class="btn btn-sm btn-outline-danger w-100">PDF Completo</button>
+          </div>
+        </div>
+        
+        <div class="form-text mt-2">
+          Os filtros aplicados serão considerados na exportação.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Scripts: Chart.js + plugin de Zoom -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
@@ -223,14 +311,141 @@ async function loadDia() {
   });
 }
 
+// Novos relatórios
+async function loadComparativo() {
+  const q = buildQuery();
+  const periodo = document.getElementById('selPeriodo').value;
+  const params = new URLSearchParams(q);
+  params.set('periodo', periodo);
+  
+  const res = await fetch('/api/stats/comparativo_periodo?' + params.toString());
+  const data = await res.json();
+
+  const ctx = document.getElementById('chartComparativo');
+  destroyChart(window.chartComparativo);
+
+  const total = data.total || 0;
+  document.getElementById('totalComparativo').innerText = `Total no período (${data.periodo}): ${total}`;
+
+  window.chartComparativo = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: `Ligações por ${data.periodo}`,
+        data: data.counts,
+        backgroundColor: 'rgba(54, 162, 235, 0.8)'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { ticks: { autoSkip: true, maxTicksLimit: 15 } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+async function loadHorarios() {
+  const q = buildQuery();
+  const res = await fetch('/api/stats/pico_horarios' + (q ? '?' + q : ''));
+  const data = await res.json();
+
+  const ctx = document.getElementById('chartHorario');
+  destroyChart(window.chartHorario);
+
+  const total = data.total || 0;
+  const maxIndex = data.counts.indexOf(Math.max(...data.counts));
+  const maxHour = data.labels[maxIndex] || 'N/A';
+  const maxValue = Math.max(...data.counts);
+  document.getElementById('totalHorarios').innerText = `Total: ${total} | Pico: ${maxHour} (${maxValue} ligações)`;
+
+  window.chartHorario = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: 'Ligações por hora',
+        data: data.counts,
+        backgroundColor: 'rgba(255, 159, 64, 0.8)'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { ticks: { autoSkip: false } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+async function loadAtendentes() {
+  const q = buildQuery();
+  const res = await fetch('/api/stats/por_atendente' + (q ? '?' + q : ''));
+  const data = await res.json();
+
+  const ctx = document.getElementById('chartAtendente');
+  destroyChart(window.chartAtendente);
+
+  const total = data.total || 0;
+  document.getElementById('totalAtendentes').innerText = `Total de ligações: ${total}`;
+
+  window.chartAtendente = new Chart(ctx, {
+    type: window._tipoAtendente || 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: 'Ligações',
+        data: data.counts,
+        backgroundColor: 'rgba(75, 192, 192, 0.8)'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.raw ?? 0;
+              return `${val} (${pct(val, total)})`;
+            }
+          }
+        }
+      },
+      scales: window._tipoAtendente === 'pie' ? {} : {
+        x: { ticks: { autoSkip: false } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+function exportData(type, format) {
+  const q = buildQuery();
+  const params = new URLSearchParams(q);
+  params.set('tipo', type);
+  
+  const url = `/api/export/${format}?` + params.toString();
+  window.open(url, '_blank');
+}
+
 /* Botões e eventos */
 document.getElementById('btnAplicar').addEventListener('click', () => {
-  loadDuvida(); loadDia();
+  loadDuvida(); loadDia(); loadComparativo(); loadHorarios(); loadAtendentes();
 });
 document.getElementById('btnLimpar').addEventListener('click', () => {
   elStart.value = ''; elEnd.value = '';
   Array.from(elTipos.options).forEach(o=>o.selected=false);
-  loadDuvida(); loadDia();
+  loadDuvida(); loadDia(); loadComparativo(); loadHorarios(); loadAtendentes();
 });
 
 document.getElementById('btnTipoBar').addEventListener('click', () => {
@@ -265,6 +480,60 @@ document.getElementById('btnDiaDownload').addEventListener('click', () => {
 });
 
 /* Carrega inicial */
-loadDuvida(); loadDia();
+loadDuvida(); loadDia(); loadComparativo(); loadHorarios(); loadAtendentes();
+
+// Event listeners para novos controles
+document.getElementById('selPeriodo').addEventListener('change', () => {
+  loadComparativo();
+});
+
+// Atendente chart type toggles
+document.getElementById('btnAtendenteBarra').addEventListener('click', () => {
+  window._tipoAtendente = 'bar';
+  loadAtendentes();
+});
+document.getElementById('btnAtendentePizza').addEventListener('click', () => {
+  window._tipoAtendente = 'pie';
+  loadAtendentes();
+});
+
+// Download buttons for new charts
+document.getElementById('btnComparativoDownload').addEventListener('click', () => {
+  if (!window.chartComparativo) return;
+  const url = window.chartComparativo.toBase64Image();
+  const a = document.createElement('a');
+  a.href = url; a.download = 'comparativo_periodo.png'; a.click();
+});
+
+document.getElementById('btnHorarioDownload').addEventListener('click', () => {
+  if (!window.chartHorario) return;
+  const url = window.chartHorario.toBase64Image();
+  const a = document.createElement('a');
+  a.href = url; a.download = 'pico_horarios.png'; a.click();
+});
+
+document.getElementById('btnAtendenteDownload').addEventListener('click', () => {
+  if (!window.chartAtendente) return;
+  const url = window.chartAtendente.toBase64Image();
+  const a = document.createElement('a');
+  a.href = url; a.download = 'por_atendente.png'; a.click();
+});
+
+// Export buttons
+document.getElementById('btnExportCSVResumo').addEventListener('click', () => {
+  exportData('por_duvida', 'csv');
+});
+
+document.getElementById('btnExportPDFResumo').addEventListener('click', () => {
+  exportData('por_duvida', 'pdf');
+});
+
+document.getElementById('btnExportCSVDetalhado').addEventListener('click', () => {
+  exportData('detalhado', 'csv');
+});
+
+document.getElementById('btnExportPDFDetalhado').addEventListener('click', () => {
+  exportData('detalhado', 'pdf');
+});
 </script>
 {% endblock %}

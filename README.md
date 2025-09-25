@@ -5,7 +5,15 @@ Sistema simples para registrar ligações recebidas e gerar relatórios com grá
 ## Recursos
 - Formulário com campos: **CRO**, **Nome do Inscrito**, **Dúvida** (com opções fixas).
 - Botão **Cadastrar ligação** que grava automaticamente **data e horário**.
-- Relatórios com **gráficos** (por tipo de dúvida e por dia).
+- **Sistema completo de relatórios** com múltiplos tipos de visualização:
+  - Distribuição por tipo de dúvida (gráficos de barra e pizza)
+  - Ligações por dia com média móvel e zoom interativo
+  - **Comparativo por período**: visualize dados por dia, semana, mês ou ano
+  - **Pico de horários**: identifique os horários com maior volume de ligações
+  - **Relatório por atendente**: acompanhe o desempenho individual dos atendentes
+- **Exportação avançada**:
+  - **CSV** (resumido e detalhado) com filtros aplicados
+  - **PDF** (resumido e detalhado) com formatação profissional
 - **Imprimir/Salvar em PDF** com o botão do navegador (página de relatório é amigável à impressão).
 - Banco local (SQLite) para desenvolvimento e **PostgreSQL** no Railway (via `DATABASE_URL`).
 
