@@ -1130,6 +1130,8 @@ async def upload_csv_profissionais(
             raise ValueError("O arquivo está vazio")
         
         # Mapear colunas possíveis (ignorando case e espaços)
+        # NOTA: O sistema aceita colunas extras além das obrigatórias 'nome' e 'numero_cro'
+        # Colunas extras são armazenadas no campo 'outras_informacoes'
         available_cols = [col.lower().strip() for col in df.columns]
         
         # Mapear colunas possíveis
@@ -1174,7 +1176,7 @@ async def upload_csv_profissionais(
         
         if not name_col or not cro_col:
             available_cols_str = ", ".join(df.columns.tolist())
-            raise ValueError(f"CSV deve conter colunas para 'nome' e 'numero_cro'. Colunas encontradas: {available_cols_str}")
+            raise ValueError(f"CSV deve conter as colunas obrigatórias 'nome' e 'numero_cro'. Colunas adicionais são aceitas e serão preservadas. Colunas encontradas: {available_cols_str}")
         
         # Limpar tabela existente antes de importar novos dados
         db = SessionLocal()
