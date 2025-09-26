@@ -33,7 +33,9 @@
         </h5>
         <p class="text-muted mb-3">
           Faça upload de um arquivo CSV contendo os dados dos profissionais aptos ao voto. 
-          O arquivo deve conter as colunas: <strong>nome</strong>, <strong>numero_cro</strong> e opcionalmente <strong>situacao</strong>.
+          O arquivo deve conter as colunas obrigatórias: <strong>NOME_COMPLETO</strong> e <strong>INSCRICAO</strong>.<br>
+          Colunas opcionais: <strong>CATEGORIA</strong>, <strong>CPF</strong>, <strong>EMAIL</strong>, <strong>OUTROS_EMAILS</strong>, 
+          <strong>CELULAR_ATUALIZADO</strong>, <strong>OUTROS_TELEFONES</strong>, <strong>SITUACAO</strong>.
         </p>
         
         <form method="post" action="/upload-csv-profissionais" enctype="multipart/form-data">
@@ -61,7 +63,7 @@
           <i class="fas fa-search me-2"></i>Buscar Profissional
         </h5>
         <p class="text-muted mb-3">
-          Digite o nome do profissional ou o número CRO para encontrar suas informações.
+          Digite o nome completo do profissional ou o número de inscrição para encontrar suas informações.
         </p>
         
         <div class="row">
@@ -70,7 +72,7 @@
               type="text" 
               id="searchInput" 
               class="form-control" 
-              placeholder="Digite o nome ou número CRO..." 
+              placeholder="Digite o nome completo ou número de inscrição..." 
               autocomplete="off"
             >
             <small class="text-muted">Digite pelo menos 2 caracteres para iniciar a busca</small>
@@ -209,19 +211,71 @@ function createProfissionalCard(profissional) {
     <div class="border rounded p-3 bg-light">
       <div class="row">
         <div class="col-md-8">
-          <h6 class="mb-1 text-primary">
+          <h6 class="mb-2 text-primary">
             <i class="fas fa-user me-2"></i>${profissional.nome}
           </h6>
-          <p class="mb-1">
-            <strong>Número CRO:</strong> 
-            <span class="badge bg-secondary">${profissional.numero_cro}</span>
-          </p>
+          
+          <div class="row mb-2">
+            <div class="col-md-6">
+              <p class="mb-1">
+                <strong>Inscrição:</strong> 
+                <span class="badge bg-secondary">${profissional.numero_cro}</span>
+              </p>
+              ${profissional.categoria ? `
+              <p class="mb-1">
+                <strong>Categoria:</strong> 
+                <span class="text-muted">${profissional.categoria}</span>
+              </p>
+              ` : ''}
+              ${profissional.cpf ? `
+              <p class="mb-1">
+                <strong>CPF:</strong> 
+                <span class="text-muted">${profissional.cpf}</span>
+              </p>
+              ` : ''}
+            </div>
+            <div class="col-md-6">
+              ${profissional.email ? `
+              <p class="mb-1">
+                <strong>Email:</strong><br>
+                <span class="text-muted small">${profissional.email}</span>
+              </p>
+              ` : ''}
+              ${profissional.outros_emails ? `
+              <p class="mb-1">
+                <strong>Outros Emails:</strong><br>
+                <span class="text-muted small">${profissional.outros_emails}</span>
+              </p>
+              ` : ''}
+            </div>
+          </div>
+          
+          <div class="row mb-2">
+            <div class="col-md-6">
+              ${profissional.celular_atualizado ? `
+              <p class="mb-1">
+                <strong>Celular Atualizado:</strong> 
+                <span class="text-muted">${profissional.celular_atualizado}</span>
+              </p>
+              ` : ''}
+            </div>
+            <div class="col-md-6">
+              ${profissional.outros_telefones ? `
+              <p class="mb-1">
+                <strong>Outros Telefones:</strong> 
+                <span class="text-muted">${profissional.outros_telefones}</span>
+              </p>
+              ` : ''}
+            </div>
+          </div>
+          
           ${profissional.situacao ? `
           <p class="mb-1">
             <strong>Situação:</strong> 
             <span class="badge ${getSituacaoBadgeClass(profissional.situacao)}">${profissional.situacao}</span>
           </p>
           ` : ''}
+          
           ${outrasInfo ? `
           <div class="mt-2">
             <strong>Outras Informações:</strong><br>

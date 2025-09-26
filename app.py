@@ -58,10 +58,16 @@ class ProfissionalApto(Base):
     """Modelo para armazenar dados dos profissionais aptos ao voto importados do CSV"""
     __tablename__ = "profissionais_aptos"
     id = Column(Integer, primary_key=True, index=True)
-    numero_cro = Column(String(50), nullable=False, index=True)  # Índice para busca rápida por CRO
-    nome = Column(String(500), nullable=False, index=True)       # Índice para busca rápida por nome
+    numero_cro = Column(String(50), nullable=False, index=True)  # INSCRIÇÃO - Índice para busca rápida por CRO
+    nome = Column(String(500), nullable=False, index=True)       # NOME_COMPLETO - Índice para busca rápida por nome
+    categoria = Column(String(200), nullable=True)              # CATEGORIA
+    cpf = Column(String(20), nullable=True)                     # CPF
+    email = Column(String(200), nullable=True)                  # EMAIL
+    outros_emails = Column(String(500), nullable=True)          # OUTROS_EMAILS
+    celular_atualizado = Column(String(50), nullable=True)      # CELULAR_ATUALIZADO
+    outros_telefones = Column(String(200), nullable=True)       # OUTROS_TELEFONES
     situacao = Column(String(200), nullable=True)               # Situação do profissional
-    outras_informacoes = Column(String(2000), nullable=True)    # Campo para outras colunas do CSV
+    outras_informacoes = Column(String(2000), nullable=True)    # Campo para outras colunas não mapeadas do CSV
     imported_at = Column(DateTime, nullable=False, server_default=func.now())  # Data da importação
 
 # Cria tabela se não existir
@@ -84,6 +90,34 @@ if "atendente" not in cols:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN atendente VARCHAR(100)"))
         else:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN atendente VARCHAR(100) NULL"))
+
+# MIGRAÇÃO LEVE: adiciona novas colunas para ProfissionalApto se faltarem
+prof_cols = []
+try:
+    prof_cols = [c["name"] for c in insp.get_columns("profissionais_aptos")]
+except:
+    pass  # Tabela ainda não existe
+
+new_columns = {
+    "categoria": "VARCHAR(200)",
+    "cpf": "VARCHAR(20)", 
+    "email": "VARCHAR(200)",
+    "outros_emails": "VARCHAR(500)",
+    "celular_atualizado": "VARCHAR(50)",
+    "outros_telefones": "VARCHAR(200)"
+}
+
+for col_name, col_type in new_columns.items():
+    if col_name not in prof_cols:
+        try:
+            with engine.begin() as conn:
+                if DATABASE_URL.startswith("sqlite"):
+                    conn.execute(text(f"ALTER TABLE profissionais_aptos ADD COLUMN {col_name} {col_type}"))
+                else:
+                    conn.execute(text(f"ALTER TABLE profissionais_aptos ADD COLUMN {col_name} {col_type} NULL"))
+        except Exception as e:
+            # Se a tabela não existir ainda, será criada pela Base.metadata.create_all
+            pass
 
 DUVIDA_OPCOES = [
     "Dúvida sanada - Profissional apto ao voto",
@@ -1088,31 +1122,44 @@ async def upload_csv_profissionais(
         available_cols = [col.lower().strip() for col in df.columns]
         
         # Mapear colunas possíveis
-        name_cols = ['nome', 'nome_profissional', 'profissional', 'nome_inscrito']
+        name_cols = ['nome', 'nome_profissional', 'profissional', 'nome_inscrito', 'nome_completo']
         cro_cols = ['numero_cro', 'cro', 'inscricao', 'numero_inscricao', 'registro']
         situacao_cols = ['situacao', 'status', 'condicao']
+        categoria_cols = ['categoria', 'tipo', 'classificacao']
+        cpf_cols = ['cpf', 'documento']
+        email_cols = ['email', 'email_principal']
+        outros_emails_cols = ['outros_emails', 'email_secundario', 'emails_alternativos']
+        celular_cols = ['celular_atualizado', 'celular', 'telefone_celular', 'telefone_principal']
+        outros_telefones_cols = ['outros_telefones', 'telefones_alternativos', 'telefone_secundario']
         
+        # Variáveis para armazenar as colunas encontradas
         name_col = None
         cro_col = None
         situacao_col = None
+        categoria_col = None
+        cpf_col = None
+        email_col = None
+        outros_emails_col = None
+        celular_col = None
+        outros_telefones_col = None
         
-        # Encontrar coluna do nome
-        for col in name_cols:
-            if col in available_cols:
-                name_col = df.columns[available_cols.index(col)]
-                break
+        # Função auxiliar para encontrar coluna
+        def find_column(possible_names, available_columns, df_columns):
+            for col_name in possible_names:
+                if col_name in available_columns:
+                    return df_columns[available_columns.index(col_name)]
+            return None
         
-        # Encontrar coluna do CRO
-        for col in cro_cols:
-            if col in available_cols:
-                cro_col = df.columns[available_cols.index(col)]
-                break
-        
-        # Encontrar coluna da situação (opcional)
-        for col in situacao_cols:
-            if col in available_cols:
-                situacao_col = df.columns[available_cols.index(col)]
-                break
+        # Encontrar colunas usando a função auxiliar
+        name_col = find_column(name_cols, available_cols, df.columns)
+        cro_col = find_column(cro_cols, available_cols, df.columns)
+        situacao_col = find_column(situacao_cols, available_cols, df.columns)
+        categoria_col = find_column(categoria_cols, available_cols, df.columns)
+        cpf_col = find_column(cpf_cols, available_cols, df.columns)
+        email_col = find_column(email_cols, available_cols, df.columns)
+        outros_emails_col = find_column(outros_emails_cols, available_cols, df.columns)
+        celular_col = find_column(celular_cols, available_cols, df.columns)
+        outros_telefones_col = find_column(outros_telefones_cols, available_cols, df.columns)
         
         if not name_col or not cro_col:
             available_cols_str = ", ".join(df.columns.tolist())
@@ -1131,11 +1178,22 @@ async def upload_csv_profissionais(
                 nome = str(row[name_col]).strip() if pd.notna(row[name_col]) else ""
                 numero_cro = str(row[cro_col]).strip() if pd.notna(row[cro_col]) else ""
                 situacao = str(row[situacao_col]).strip() if situacao_col and pd.notna(row[situacao_col]) else ""
+                categoria = str(row[categoria_col]).strip() if categoria_col and pd.notna(row[categoria_col]) else ""
+                cpf = str(row[cpf_col]).strip() if cpf_col and pd.notna(row[cpf_col]) else ""
+                email = str(row[email_col]).strip() if email_col and pd.notna(row[email_col]) else ""
+                outros_emails = str(row[outros_emails_col]).strip() if outros_emails_col and pd.notna(row[outros_emails_col]) else ""
+                celular_atualizado = str(row[celular_col]).strip() if celular_col and pd.notna(row[celular_col]) else ""
+                outros_telefones = str(row[outros_telefones_col]).strip() if outros_telefones_col and pd.notna(row[outros_telefones_col]) else ""
                 
-                # Construir outras informações (colunas extras)
+                # Colunas mapeadas para não incluir em outras_informacoes
+                mapped_cols = [name_col, cro_col, situacao_col, categoria_col, cpf_col, 
+                              email_col, outros_emails_col, celular_col, outros_telefones_col]
+                mapped_cols = [col for col in mapped_cols if col is not None]
+                
+                # Construir outras informações (colunas não mapeadas)
                 outras_info = {}
                 for col in df.columns:
-                    if col not in [name_col, cro_col, situacao_col]:
+                    if col not in mapped_cols:
                         value = row[col]
                         if pd.notna(value):
                             outras_info[col] = str(value).strip()
@@ -1147,6 +1205,12 @@ async def upload_csv_profissionais(
                     profissional = ProfissionalApto(
                         nome=nome,
                         numero_cro=numero_cro,
+                        categoria=categoria,
+                        cpf=cpf,
+                        email=email,
+                        outros_emails=outros_emails,
+                        celular_atualizado=celular_atualizado,
+                        outros_telefones=outros_telefones,
                         situacao=situacao,
                         outras_informacoes=outras_informacoes,
                         imported_at=datetime.now(timezone.utc)
@@ -1217,8 +1281,14 @@ def pesquisar_profissional(
             
             profissionais.append({
                 "id": p.id,
-                "nome": p.nome,
-                "numero_cro": p.numero_cro,
+                "nome": p.nome,  # NOME_COMPLETO
+                "numero_cro": p.numero_cro,  # INSCRIÇÃO
+                "categoria": p.categoria or "",  # CATEGORIA
+                "cpf": p.cpf or "",  # CPF
+                "email": p.email or "",  # EMAIL
+                "outros_emails": p.outros_emails or "",  # OUTROS_EMAILS
+                "celular_atualizado": p.celular_atualizado or "",  # CELULAR_ATUALIZADO
+                "outros_telefones": p.outros_telefones or "",  # OUTROS_TELEFONES
                 "situacao": p.situacao or "",
                 "outras_informacoes": outras_info,
                 "data_importacao": format_sp(p.imported_at)
