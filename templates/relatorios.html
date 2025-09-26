@@ -179,9 +179,48 @@
   </div>
 </div>
 
-<!-- Scripts: Chart.js + plugin de Zoom -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
+<!-- Scripts: Chart.js + plugin de Zoom (using alternative CDNs) -->
+<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js" onload="console.log('Chart.js loaded successfully from unpkg')" onerror="loadChartJSFallback()"></script>
+<script src="https://unpkg.com/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js" onload="console.log('Chart.js zoom plugin loaded successfully')" onerror="console.warn('Chart.js zoom plugin failed to load')"></script>
+
+<script>
+function loadChartJSFallback() {
+  console.warn('Chart.js failed to load from unpkg, trying jsdelivr...');
+  const script1 = document.createElement('script');
+  script1.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.js';
+  script1.onload = () => console.log('Chart.js loaded successfully from jsdelivr fallback');
+  script1.onerror = () => {
+    console.error('All Chart.js CDNs failed. Charts will not work.');
+    // Show error message on page
+    document.querySelectorAll('canvas').forEach(canvas => {
+      const container = canvas.parentElement;
+      if (container) {
+        container.innerHTML = '<div class="alert alert-warning">Chart.js library failed to load from CDN. Charts cannot be displayed.</div>';
+      }
+    });
+  };
+  document.head.appendChild(script1);
+
+  const script2 = document.createElement('script');
+  script2.src = 'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js';
+  document.head.appendChild(script2);
+}
+
+// Check if Chart.js is loaded after a short delay
+setTimeout(() => {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is still not defined after loading attempts');
+    document.querySelectorAll('canvas').forEach(canvas => {
+      const container = canvas.parentElement;
+      if (container) {
+        container.innerHTML = '<div class="alert alert-warning">Chart.js library failed to load. Please refresh the page or check your internet connection.</div>';
+      }
+    });
+  } else {
+    console.log('Chart.js is available and ready');
+  }
+}, 2000);
+</script>
 <script>
 const elStart = document.getElementById('fStart');
 const elEnd = document.getElementById('fEnd');
@@ -207,47 +246,114 @@ function pct(value, total) {
 
 let chartDuvida, chartDia;
 
-function destroyChart(c) { if (c) { c.destroy(); } }
+function destroyChart(c) { 
+  if (c && typeof c.destroy === 'function') { 
+    c.destroy(); 
+  } 
+}
+
+function showDataAsTable(canvasId, data, title) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  
+  const container = canvas.parentElement;
+  if (!container) return;
+  
+  // Replace canvas with table
+  let html = `<div class="chart-fallback">
+    <div class="alert alert-info mb-2">
+      <small>📊 Chart.js não disponível - mostrando dados em tabela</small>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-striped">
+        <thead class="table-dark">
+          <tr><th>Item</th><th>Quantidade</th></tr>
+        </thead>
+        <tbody>`;
+  
+  for (let i = 0; i < data.labels.length; i++) {
+    const label = data.labels[i] || 'N/A';
+    const count = data.counts[i] || 0;
+    html += `<tr><td>${label}</td><td><strong>${count}</strong></td></tr>`;
+  }
+  
+  html += `</tbody></table></div></div>`;
+  container.innerHTML = html;
+}
 
 async function loadDuvida() {
-  const q = buildQuery();
-  const res = await fetch('/api/stats/por_duvida' + (q ? '?' + q : ''));
-  const data = await res.json();
+  try {
+    if (typeof Chart === 'undefined') {
+      console.error('Chart.js is not loaded - cannot create duvida chart');
+      document.getElementById('totalDuvidas').innerText = 'Chart.js não carregado - recarregue a página';
+      return;
+    }
+    
+    const q = buildQuery();
+    console.log('Loading duvida chart with params:', q);
+    
+    const res = await fetch('/api/stats/por_duvida' + (q ? '?' + q : ''));
+    
+    if (!res.ok) {
+      console.error('Error loading duvida data:', res.status, res.statusText);
+      document.getElementById('totalDuvidas').innerText = `Erro ao carregar dados: ${res.status}`;
+      return;
+    }
+    
+    const data = await res.json();
+    console.log('Duvida data received:', data);
 
-  const ctx = document.getElementById('chartDuvida');
-  destroyChart(chartDuvida);
+    if (!data.labels || !data.counts) {
+      console.error('Invalid data format for duvida:', data);
+      document.getElementById('totalDuvidas').innerText = 'Dados em formato inválido';
+      return;
+    }
 
-  const total = data.total || data.counts.reduce((a,b)=>a+b,0);
-  document.getElementById('totalDuvidas').innerText = `Total de ligações no período: ${total}`;
+    const ctx = document.getElementById('chartDuvida');
+    if (!ctx) {
+      console.error('Canvas element chartDuvida not found');
+      return;
+    }
+    
+    destroyChart(chartDuvida);
 
-  chartDuvida = new Chart(ctx, {
-    type: window._tipoDuvida || 'bar',
-    data: {
-      labels: data.labels,
-      datasets: [{
-        label: 'Quantidade',
-        data: data.counts
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const val = ctx.raw ?? 0;
-              return `${val} (${pct(val, total)})`;
+    const total = data.total || data.counts.reduce((a,b)=>a+b,0);
+    document.getElementById('totalDuvidas').innerText = `Total de ligações no período: ${total}`;
+
+    chartDuvida = new Chart(ctx, {
+      type: window._tipoDuvida || 'bar',
+      data: {
+        labels: data.labels || [],
+        datasets: [{
+          label: 'Quantidade',
+          data: data.counts || []
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const val = ctx.raw ?? 0;
+                return `${val} (${pct(val, total)})`;
+              }
             }
           }
+        },
+        scales: window._tipoDuvida === 'pie' ? {} : {
+          x: { ticks: { autoSkip: false } },
+          y: { beginAtZero: true }
         }
-      },
-      scales: window._tipoDuvida === 'pie' ? {} : {
-        x: { ticks: { autoSkip: false } },
-        y: { beginAtZero: true }
       }
-    }
-  });
+    });
+    
+    console.log('Duvida chart created successfully');
+  } catch (error) {
+    console.error('Exception in loadDuvida:', error);
+    document.getElementById('totalDuvidas').innerText = 'Erro ao carregar gráfico';
+  }
 }
 
 function movingAverage(arr, w=7) {
@@ -262,171 +368,308 @@ function movingAverage(arr, w=7) {
 }
 
 async function loadDia() {
-  const q = buildQuery();
-  const res = await fetch('/api/stats/por_dia' + (q ? '?' + q : ''));
-  const data = await res.json();
-
-  const ctx = document.getElementById('chartDia');
-  destroyChart(chartDia);
-
-  const baseDataset = {
-    label: 'Ligações por dia',
-    data: data.counts
-  };
-  const datasets = [baseDataset];
-
-  if (document.getElementById('chkMedia').checked) {
-    datasets.push({
-      label: 'Média móvel 7d',
-      data: movingAverage(data.counts, 7),
-      borderWidth: 2,
-      tension: 0.2
-    });
-  }
-
-  chartDia = new Chart(ctx, {
-    type: 'line',
-    data: { labels: data.labels, datasets },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: true },
-        zoom: {
-          zoom: {
-            wheel: { enabled: true },
-            drag: { enabled: true },
-            mode: 'x'
-          },
-          pan: {
-            enabled: true,
-            mode: 'x',
-            modifierKey: 'alt'
-          }
-        }
-      },
-      scales: {
-        y: { beginAtZero: true }
-      }
+  try {
+    if (typeof Chart === 'undefined') {
+      console.error('Chart.js is not loaded - cannot create dia chart');
+      return;
     }
-  });
+    
+    const q = buildQuery();
+    console.log('Loading dia chart with params:', q);
+    
+    const res = await fetch('/api/stats/por_dia' + (q ? '?' + q : ''));
+    
+    if (!res.ok) {
+      console.error('Error loading dia data:', res.status, res.statusText);
+      return;
+    }
+    
+    const data = await res.json();
+    console.log('Dia data received:', data);
+
+    if (!data.labels || !data.counts) {
+      console.error('Invalid data format for dia:', data);
+      return;
+    }
+
+    const ctx = document.getElementById('chartDia');
+    if (!ctx) {
+      console.error('Canvas element chartDia not found');
+      return;
+    }
+    
+    destroyChart(chartDia);
+
+    const baseDataset = {
+      label: 'Ligações por dia',
+      data: data.counts || []
+    };
+    const datasets = [baseDataset];
+
+    if (document.getElementById('chkMedia').checked) {
+      datasets.push({
+        label: 'Média móvel 7d',
+        data: movingAverage(data.counts || [], 7),
+        borderWidth: 2,
+        tension: 0.2
+      });
+    }
+
+    chartDia = new Chart(ctx, {
+      type: 'line',
+      data: { labels: data.labels || [], datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true },
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              drag: { enabled: true },
+              mode: 'x'
+            },
+            pan: {
+              enabled: true,
+              mode: 'x',
+              modifierKey: 'alt'
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+    
+    console.log('Dia chart created successfully');
+  } catch (error) {
+    console.error('Exception in loadDia:', error);
+  }
 }
 
 // Novos relatórios
 async function loadComparativo() {
-  const q = buildQuery();
-  const periodo = document.getElementById('selPeriodo').value;
-  const params = new URLSearchParams(q);
-  params.set('periodo', periodo);
-  
-  const res = await fetch('/api/stats/comparativo_periodo?' + params.toString());
-  const data = await res.json();
-
-  const ctx = document.getElementById('chartComparativo');
-  destroyChart(window.chartComparativo);
-
-  const total = data.total || 0;
-  document.getElementById('totalComparativo').innerText = `Total no período (${data.periodo}): ${total}`;
-
-  window.chartComparativo = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: data.labels,
-      datasets: [{
-        label: `Ligações por ${data.periodo}`,
-        data: data.counts,
-        backgroundColor: 'rgba(54, 162, 235, 0.8)'
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: { ticks: { autoSkip: true, maxTicksLimit: 15 } },
-        y: { beginAtZero: true }
-      }
+  try {
+    const q = buildQuery();
+    const periodo = document.getElementById('selPeriodo').value;
+    const params = new URLSearchParams(q);
+    params.set('periodo', periodo);
+    
+    console.log('Loading comparativo chart with params:', params.toString());
+    
+    const res = await fetch('/api/stats/comparativo_periodo?' + params.toString());
+    
+    if (!res.ok) {
+      console.error('Error loading comparativo data:', res.status, res.statusText);
+      document.getElementById('totalComparativo').innerText = `Erro ao carregar dados: ${res.status}`;
+      return;
     }
-  });
+    
+    const data = await res.json();
+    console.log('Comparativo data received:', data);
+
+    if (!data.labels || !data.counts) {
+      console.error('Invalid data format for comparativo:', data);
+      document.getElementById('totalComparativo').innerText = 'Dados em formato inválido';
+      return;
+    }
+
+    const total = data.total || 0;
+    document.getElementById('totalComparativo').innerText = `Total no período (${data.periodo || periodo}): ${total}`;
+
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded - showing data as table for comparativo chart');
+      showDataAsTable('chartComparativo', data, `Ligações por ${data.periodo || periodo}`);
+      return;
+    }
+
+    const ctx = document.getElementById('chartComparativo');
+    if (!ctx) {
+      console.error('Canvas element chartComparativo not found');
+      return;
+    }
+    
+    destroyChart(window.chartComparativo);
+
+    window.chartComparativo = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.labels || [],
+        datasets: [{
+          label: `Ligações por ${data.periodo || periodo}`,
+          data: data.counts || [],
+          backgroundColor: 'rgba(54, 162, 235, 0.8)'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { ticks: { autoSkip: true, maxTicksLimit: 15 } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+    
+    console.log('Comparativo chart created successfully');
+  } catch (error) {
+    console.error('Exception in loadComparativo:', error);
+    document.getElementById('totalComparativo').innerText = 'Erro ao carregar gráfico';
+  }
 }
 
 async function loadHorarios() {
-  const q = buildQuery();
-  const res = await fetch('/api/stats/pico_horarios' + (q ? '?' + q : ''));
-  const data = await res.json();
-
-  const ctx = document.getElementById('chartHorario');
-  destroyChart(window.chartHorario);
-
-  const total = data.total || 0;
-  const maxIndex = data.counts.indexOf(Math.max(...data.counts));
-  const maxHour = data.labels[maxIndex] || 'N/A';
-  const maxValue = Math.max(...data.counts);
-  document.getElementById('totalHorarios').innerText = `Total: ${total} | Pico: ${maxHour} (${maxValue} ligações)`;
-
-  window.chartHorario = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: data.labels,
-      datasets: [{
-        label: 'Ligações por hora',
-        data: data.counts,
-        backgroundColor: 'rgba(255, 159, 64, 0.8)'
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: { ticks: { autoSkip: false } },
-        y: { beginAtZero: true }
-      }
+  try {
+    const q = buildQuery();
+    console.log('Loading horarios chart with params:', q);
+    
+    const res = await fetch('/api/stats/pico_horarios' + (q ? '?' + q : ''));
+    
+    if (!res.ok) {
+      console.error('Error loading horarios data:', res.status, res.statusText);
+      document.getElementById('totalHorarios').innerText = `Erro ao carregar dados: ${res.status}`;
+      return;
     }
-  });
+    
+    const data = await res.json();
+    console.log('Horarios data received:', data);
+
+    if (!data.labels || !data.counts) {
+      console.error('Invalid data format for horarios:', data);
+      document.getElementById('totalHorarios').innerText = 'Dados em formato inválido';
+      return;
+    }
+
+    const total = data.total || 0;
+    const maxIndex = data.counts.length > 0 ? data.counts.indexOf(Math.max(...data.counts)) : -1;
+    const maxHour = maxIndex >= 0 ? data.labels[maxIndex] : 'N/A';
+    const maxValue = maxIndex >= 0 ? Math.max(...data.counts) : 0;
+    document.getElementById('totalHorarios').innerText = `Total: ${total} | Pico: ${maxHour} (${maxValue} ligações)`;
+
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded - showing data as table for horarios chart');
+      // Filter out hours with 0 calls for cleaner display
+      const filteredData = {
+        labels: data.labels.filter((_, i) => data.counts[i] > 0),
+        counts: data.counts.filter(count => count > 0)
+      };
+      showDataAsTable('chartHorario', filteredData, 'Ligações por hora');
+      return;
+    }
+
+    const ctx = document.getElementById('chartHorario');
+    if (!ctx) {
+      console.error('Canvas element chartHorario not found');
+      return;
+    }
+    
+    destroyChart(window.chartHorario);
+
+    window.chartHorario = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.labels || [],
+        datasets: [{
+          label: 'Ligações por hora',
+          data: data.counts || [],
+          backgroundColor: 'rgba(255, 159, 64, 0.8)'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { ticks: { autoSkip: false } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+    
+    console.log('Horarios chart created successfully');
+  } catch (error) {
+    console.error('Exception in loadHorarios:', error);
+    document.getElementById('totalHorarios').innerText = 'Erro ao carregar gráfico';
+  }
 }
 
 async function loadAtendentes() {
-  const q = buildQuery();
-  const res = await fetch('/api/stats/por_atendente' + (q ? '?' + q : ''));
-  const data = await res.json();
+  try {
+    const q = buildQuery();
+    console.log('Loading atendentes chart with params:', q);
+    
+    const res = await fetch('/api/stats/por_atendente' + (q ? '?' + q : ''));
+    
+    if (!res.ok) {
+      console.error('Error loading atendentes data:', res.status, res.statusText);
+      document.getElementById('totalAtendentes').innerText = `Erro ao carregar dados: ${res.status}`;
+      return;
+    }
+    
+    const data = await res.json();
+    console.log('Atendentes data received:', data);
 
-  const ctx = document.getElementById('chartAtendente');
-  destroyChart(window.chartAtendente);
+    if (!data.labels || !data.counts) {
+      console.error('Invalid data format for atendentes:', data);
+      document.getElementById('totalAtendentes').innerText = 'Dados em formato inválido';
+      return;
+    }
 
-  const total = data.total || 0;
-  document.getElementById('totalAtendentes').innerText = `Total de ligações: ${total}`;
+    const total = data.total || 0;
+    document.getElementById('totalAtendentes').innerText = `Total de ligações: ${total}`;
 
-  window.chartAtendente = new Chart(ctx, {
-    type: window._tipoAtendente || 'bar',
-    data: {
-      labels: data.labels,
-      datasets: [{
-        label: 'Ligações',
-        data: data.counts,
-        backgroundColor: 'rgba(75, 192, 192, 0.8)'
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const val = ctx.raw ?? 0;
-              return `${val} (${pct(val, total)})`;
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded - showing data as table for atendentes chart');
+      showDataAsTable('chartAtendente', data, 'Ligações por atendente');
+      return;
+    }
+
+    const ctx = document.getElementById('chartAtendente');
+    if (!ctx) {
+      console.error('Canvas element chartAtendente not found');
+      return;
+    }
+    
+    destroyChart(window.chartAtendente);
+
+    window.chartAtendente = new Chart(ctx, {
+      type: window._tipoAtendente || 'bar',
+      data: {
+        labels: data.labels || [],
+        datasets: [{
+          label: 'Ligações',
+          data: data.counts || [],
+          backgroundColor: 'rgba(75, 192, 192, 0.8)'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const val = ctx.raw ?? 0;
+                return `${val} (${pct(val, total)})`;
+              }
             }
           }
+        },
+        scales: window._tipoAtendente === 'pie' ? {} : {
+          x: { ticks: { autoSkip: false } },
+          y: { beginAtZero: true }
         }
-      },
-      scales: window._tipoAtendente === 'pie' ? {} : {
-        x: { ticks: { autoSkip: false } },
-        y: { beginAtZero: true }
       }
-    }
-  });
+    });
+    
+    console.log('Atendentes chart created successfully');
+  } catch (error) {
+    console.error('Exception in loadAtendentes:', error);
+    document.getElementById('totalAtendentes').innerText = 'Erro ao carregar gráfico';
+  }
 }
 
 function exportData(type, format) {
