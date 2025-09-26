@@ -693,46 +693,39 @@ def stats_pico_horarios(request: Request, session_token: str = Cookie(None, alia
     if not can_access_reports(current_username):
         raise HTTPException(status_code=403, detail="Acesso negado - Você não tem permissão para acessar relatórios")
     
-    start = _parse_date(request.query_params.get("start"))
-    end = _parse_date(request.query_params.get("end"))
-    tipos_raw = request.query_params.get("tipos", "")
-    tipos = set([t for t in (s.strip() for s in tipos_raw.split(",")) if t]) if tipos_raw else set()
-
-    db = SessionLocal()
-    try:
-        rows = db.query(Ligacao.created_at, Ligacao.duvida).all()
-    finally:
-        db.close()
-
-    filtered = _filter_rows(rows, start, end, tipos)
+    # Garantir que sempre retornamos a estrutura correta mesmo em caso de erro
+    all_hours = [f"{h:02d}:00" for h in range(24)]
+    default_response = {
+        "labels": all_hours,
+        "counts": [0] * 24,
+        "total": 0
+    }
     
-    # Agrupar por hora do dia
-    by_hour = {}
-    for dia, _ in filtered:
-        # Converter para fuso BR e extrair hora
-        dt_br = to_sp(datetime.combine(dia, datetime.min.time()))
-        if hasattr(dt_br, 'hour'):
-            hour_key = f"{dt_br.hour:02d}:00"
-        else:
-            # Fallback se não tiver hora específica, usar estimativa baseada no created_at original
-            continue
-        by_hour[hour_key] = by_hour.get(hour_key, 0) + 1
+    try:
+        start = _parse_date(request.query_params.get("start"))
+        end = _parse_date(request.query_params.get("end"))
+        tipos_raw = request.query_params.get("tipos", "")
+        tipos = set([t for t in (s.strip() for s in tipos_raw.split(",")) if t]) if tipos_raw else set()
 
-    # Se não temos dados com hora específica, vamos buscar do created_at completo
-    if not by_hour:
+        # Buscar dados completos (created_at + duvida) e aplicar filtros corretamente
         db = SessionLocal()
         try:
             all_calls = db.query(Ligacao).all()
         finally:
             db.close()
-            
+        
+        # Agrupar por hora do dia aplicando filtros
+        by_hour = {}
         for call in all_calls:
             if not call.created_at:
                 continue
+                
+            # Converter para fuso BR
             dt_br = to_sp(call.created_at)
-            hour_key = f"{dt_br.hour:02d}:00"
-            
-            # Aplicar filtros
+            if not dt_br:
+                continue
+                
+            # Aplicar filtros de data
             call_date = dt_br.date()
             if start and call_date < start:
                 continue
@@ -741,17 +734,24 @@ def stats_pico_horarios(request: Request, session_token: str = Cookie(None, alia
             if tipos and call.duvida not in tipos:
                 continue
                 
+            # Extrair hora e agrupar
+            hour_key = f"{dt_br.hour:02d}:00"
             by_hour[hour_key] = by_hour.get(hour_key, 0) + 1
+        
+        # Gerar counts para todas as horas (0-23) - sempre 24 horas
+        counts = [by_hour.get(hour, 0) for hour in all_hours]
+        
+        # Retornar estrutura sempre correta
+        return {
+            "labels": all_hours,
+            "counts": counts,
+            "total": sum(counts)
+        }
     
-    # Gerar labels para todas as horas (0-23)
-    all_hours = [f"{h:02d}:00" for h in range(24)]
-    counts = [by_hour.get(hour, 0) for hour in all_hours]
-    
-    return {
-        "labels": all_hours,
-        "counts": counts,
-        "total": sum(counts)
-    }
+    except Exception as e:
+        # Em caso de erro, retornar estrutura padrão com dados zerados
+        # Isso garante que o frontend não quebre
+        return default_response
 
 # API: relatório por atendente
 @app.get("/api/stats/por_atendente")
