@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 mb-0">
+        <i class="fas fa-search me-2"></i>Pesquisa Profissional Apto ao Voto
+      </h1>
+    </div>
+
+    <!-- Mensagens de feedback -->
+    {% if success_message %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <i class="fas fa-check-circle me-2"></i>{{ success_message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    {% if error_message %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <i class="fas fa-exclamation-triangle me-2"></i>{{ error_message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Upload do CSV (apenas para administradores) -->
+    {% if can_access_reports %}
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">
+          <i class="fas fa-file-upload me-2"></i>Importar CSV de Profissionais
+        </h5>
+        <p class="text-muted mb-3">
+          Faça upload de um arquivo CSV contendo os dados dos profissionais aptos ao voto. 
+          O arquivo deve conter as colunas: <strong>nome</strong>, <strong>numero_cro</strong> e opcionalmente <strong>situacao</strong>.
+        </p>
+        
+        <form method="post" action="/upload-csv-profissionais" enctype="multipart/form-data">
+          <div class="row align-items-end">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Arquivo CSV</label>
+              <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+              <small class="text-muted">Apenas arquivos .csv são aceitos</small>
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-success w-100">
+                <i class="fas fa-upload me-2"></i>Importar CSV
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Formulário de pesquisa -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">
+          <i class="fas fa-search me-2"></i>Buscar Profissional
+        </h5>
+        <p class="text-muted mb-3">
+          Digite o nome do profissional ou o número CRO para encontrar suas informações.
+        </p>
+        
+        <div class="row">
+          <div class="col-md-8">
+            <input 
+              type="text" 
+              id="searchInput" 
+              class="form-control" 
+              placeholder="Digite o nome ou número CRO..." 
+              autocomplete="off"
+            >
+            <small class="text-muted">Digite pelo menos 2 caracteres para iniciar a busca</small>
+          </div>
+          <div class="col-md-4">
+            <button id="searchBtn" class="btn btn-primary w-100">
+              <i class="fas fa-search me-2"></i>Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loading" class="text-center py-4" style="display: none;">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Buscando...</span>
+      </div>
+      <p class="mt-2 text-muted">Buscando profissionais...</p>
+    </div>
+
+    <!-- Resultados da pesquisa -->
+    <div id="results" class="card" style="display: none;">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="fas fa-list me-2"></i>Resultados da Pesquisa
+        </h5>
+        <span id="resultCount" class="badge bg-primary">0</span>
+      </div>
+      <div class="card-body" id="resultsList">
+        <!-- Resultados serão inseridos aqui via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Mensagem quando não há resultados -->
+    <div id="noResults" class="card" style="display: none;">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-search text-muted mb-3" style="font-size: 3rem;"></i>
+        <h5 class="text-muted">Nenhum profissional encontrado</h5>
+        <p class="text-muted mb-0">Tente pesquisar com outros termos ou verifique se o CSV foi importado corretamente.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Variáveis globais
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const loading = document.getElementById('loading');
+const results = document.getElementById('results');
+const noResults = document.getElementById('noResults');
+const resultsList = document.getElementById('resultsList');
+const resultCount = document.getElementById('resultCount');
+
+// Função para realizar a pesquisa
+async function performSearch(query) {
+  if (!query || query.length < 2) {
+    hideResults();
+    return;
+  }
+
+  showLoading();
+
+  try {
+    const response = await fetch(`/api/pesquisar-profissional?q=${encodeURIComponent(query)}`);
+    
+    if (!response.ok) {
+      throw new Error(`Erro ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    hideLoading();
+    displayResults(data);
+    
+  } catch (error) {
+    hideLoading();
+    showError('Erro ao buscar profissionais: ' + error.message);
+  }
+}
+
+// Função para mostrar loading
+function showLoading() {
+  loading.style.display = 'block';
+  results.style.display = 'none';
+  noResults.style.display = 'none';
+}
+
+// Função para esconder loading
+function hideLoading() {
+  loading.style.display = 'none';
+}
+
+// Função para esconder resultados
+function hideResults() {
+  results.style.display = 'none';
+  noResults.style.display = 'none';
+  hideLoading();
+}
+
+// Função para exibir resultados
+function displayResults(data) {
+  if (!data.results || data.results.length === 0) {
+    results.style.display = 'none';
+    noResults.style.display = 'block';
+    return;
+  }
+
+  resultCount.textContent = data.total;
+  resultsList.innerHTML = '';
+
+  data.results.forEach(profissional => {
+    const card = createProfissionalCard(profissional);
+    resultsList.appendChild(card);
+  });
+
+  results.style.display = 'block';
+  noResults.style.display = 'none';
+}
+
+// Função para criar card de profissional
+function createProfissionalCard(profissional) {
+  const div = document.createElement('div');
+  div.className = 'mb-3';
+  
+  // Preparar outras informações
+  let outrasInfo = '';
+  if (profissional.outras_informacoes && Object.keys(profissional.outras_informacoes).length > 0) {
+    outrasInfo = Object.entries(profissional.outras_informacoes)
+      .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+      .join('<br>');
+  }
+  
+  div.innerHTML = `
+    <div class="border rounded p-3 bg-light">
+      <div class="row">
+        <div class="col-md-8">
+          <h6 class="mb-1 text-primary">
+            <i class="fas fa-user me-2"></i>${profissional.nome}
+          </h6>
+          <p class="mb-1">
+            <strong>Número CRO:</strong> 
+            <span class="badge bg-secondary">${profissional.numero_cro}</span>
+          </p>
+          ${profissional.situacao ? `
+          <p class="mb-1">
+            <strong>Situação:</strong> 
+            <span class="badge ${getSituacaoBadgeClass(profissional.situacao)}">${profissional.situacao}</span>
+          </p>
+          ` : ''}
+          ${outrasInfo ? `
+          <div class="mt-2">
+            <strong>Outras Informações:</strong><br>
+            <small class="text-muted">${outrasInfo}</small>
+          </div>
+          ` : ''}
+        </div>
+        <div class="col-md-4 text-end">
+          <small class="text-muted">
+            <i class="fas fa-clock me-1"></i>Importado em<br>
+            ${profissional.data_importacao}
+          </small>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  return div;
+}
+
+// Função para determinar classe do badge da situação
+function getSituacaoBadgeClass(situacao) {
+  const s = situacao.toLowerCase();
+  if (s.includes('apto') || s.includes('ativo')) return 'bg-success';
+  if (s.includes('não apto') || s.includes('inativo')) return 'bg-danger';
+  if (s.includes('pendente') || s.includes('análise')) return 'bg-warning';
+  return 'bg-secondary';
+}
+
+// Função para mostrar erros
+function showError(message) {
+  const alertDiv = document.createElement('div');
+  alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+  alertDiv.innerHTML = `
+    <i class="fas fa-exclamation-triangle me-2"></i>${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  const container = document.querySelector('.col-12');
+  container.insertBefore(alertDiv, container.firstChild.nextSibling);
+  
+  // Auto-remover após 5 segundos
+  setTimeout(() => {
+    alertDiv.remove();
+  }, 5000);
+}
+
+// Event listeners
+searchInput.addEventListener('input', (e) => {
+  const query = e.target.value.trim();
+  
+  // Debounce para evitar muitas requisições
+  clearTimeout(searchInput.debounceTimer);
+  
+  if (query.length >= 2) {
+    searchInput.debounceTimer = setTimeout(() => {
+      performSearch(query);
+    }, 300);
+  } else if (query.length === 0) {
+    hideResults();
+  }
+});
+
+searchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    performSearch(e.target.value.trim());
+  }
+});
+
+searchBtn.addEventListener('click', () => {
+  performSearch(searchInput.value.trim());
+});
+
+// Focus no input ao carregar a página
+document.addEventListener('DOMContentLoaded', () => {
+  searchInput.focus();
+});
+</script>
+{% endblock %}

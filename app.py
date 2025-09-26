@@ -6,7 +6,7 @@ import io
 import csv
 from typing import List, Dict, Any
 
-from fastapi import FastAPI, Request, Form, HTTPException, Depends, Cookie
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, Cookie, UploadFile, File
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -53,6 +53,16 @@ class Ligacao(Base):
     observacao = Column(String(1000), nullable=True)
     atendente = Column(String(100), nullable=True)  # Nome do atendente que registrou
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+class ProfissionalApto(Base):
+    """Modelo para armazenar dados dos profissionais aptos ao voto importados do CSV"""
+    __tablename__ = "profissionais_aptos"
+    id = Column(Integer, primary_key=True, index=True)
+    numero_cro = Column(String(50), nullable=False, index=True)  # Índice para busca rápida por CRO
+    nome = Column(String(500), nullable=False, index=True)       # Índice para busca rápida por nome
+    situacao = Column(String(200), nullable=True)               # Situação do profissional
+    outras_informacoes = Column(String(2000), nullable=True)    # Campo para outras colunas do CSV
+    imported_at = Column(DateTime, nullable=False, server_default=func.now())  # Data da importação
 
 # Cria tabela se não existir
 Base.metadata.create_all(bind=engine)
@@ -1006,3 +1016,219 @@ def export_pdf(request: Request, session_token: str = Cookie(None, alias=SESSION
         headers={"Content-Disposition": f"attachment; filename=relatorio_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"}
     )
     return response
+
+# === ROTAS PARA PESQUISA DE PROFISSIONAIS APTOS AO VOTO ===
+
+@app.get("/pesquisa-profissional")
+def pesquisa_profissional(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    """Página de pesquisa de profissionais aptos ao voto"""
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+    
+    # Obter usuário atual
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    
+    return templates.TemplateResponse("pesquisa_profissional.html", {
+        "request": request,
+        "current_user": current_user,
+        "current_username": current_username,
+        "current_user_fullname": get_user_full_name(current_username),
+        "can_access_reports": can_access_reports(current_username),
+        "can_edit_delete": can_edit_delete(current_username),
+    })
+
+@app.post("/upload-csv-profissionais")
+async def upload_csv_profissionais(
+    request: Request,
+    csv_file: UploadFile = File(...), 
+    session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)
+):
+    """Upload e processamento do arquivo CSV com profissionais aptos ao voto"""
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        return RedirectResponse("/login", status_code=302)
+    
+    # Verificar permissão (apenas administrador pode fazer upload)
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    if not can_access_reports(current_username):
+        raise HTTPException(status_code=403, detail="Acesso negado - Apenas administradores podem importar CSV")
+    
+    # Validar tipo de arquivo
+    if not csv_file.filename or not csv_file.filename.lower().endswith('.csv'):
+        return templates.TemplateResponse("pesquisa_profissional.html", {
+            "request": request,
+            "current_user": current_user,
+            "current_username": current_username,
+            "current_user_fullname": get_user_full_name(current_username),
+            "can_access_reports": can_access_reports(current_username),
+            "can_edit_delete": can_edit_delete(current_username),
+            "error_message": "Por favor, envie um arquivo CSV válido (.csv)",
+        })
+    
+    try:
+        # Ler conteúdo do arquivo
+        content = await csv_file.read()
+        csv_string = content.decode('utf-8')
+        
+        # Processar dados CSV
+        import pandas as pd
+        from io import StringIO
+        
+        # Ler CSV da string
+        df = pd.read_csv(StringIO(csv_string))
+        
+        # Validar se o DataFrame não está vazio
+        if df.empty:
+            raise ValueError("O arquivo CSV está vazio")
+        
+        # Mapear colunas possíveis (ignorando case e espaços)
+        available_cols = [col.lower().strip() for col in df.columns]
+        
+        # Mapear colunas possíveis
+        name_cols = ['nome', 'nome_profissional', 'profissional', 'nome_inscrito']
+        cro_cols = ['numero_cro', 'cro', 'inscricao', 'numero_inscricao', 'registro']
+        situacao_cols = ['situacao', 'status', 'condicao']
+        
+        name_col = None
+        cro_col = None
+        situacao_col = None
+        
+        # Encontrar coluna do nome
+        for col in name_cols:
+            if col in available_cols:
+                name_col = df.columns[available_cols.index(col)]
+                break
+        
+        # Encontrar coluna do CRO
+        for col in cro_cols:
+            if col in available_cols:
+                cro_col = df.columns[available_cols.index(col)]
+                break
+        
+        # Encontrar coluna da situação (opcional)
+        for col in situacao_cols:
+            if col in available_cols:
+                situacao_col = df.columns[available_cols.index(col)]
+                break
+        
+        if not name_col or not cro_col:
+            available_cols_str = ", ".join(df.columns.tolist())
+            raise ValueError(f"CSV deve conter colunas para 'nome' e 'numero_cro'. Colunas encontradas: {available_cols_str}")
+        
+        # Limpar tabela existente antes de importar novos dados
+        db = SessionLocal()
+        try:
+            db.query(ProfissionalApto).delete()
+            db.commit()
+            
+            # Processar cada linha do CSV
+            success_count = 0
+            for _, row in df.iterrows():
+                # Extrair dados das colunas identificadas
+                nome = str(row[name_col]).strip() if pd.notna(row[name_col]) else ""
+                numero_cro = str(row[cro_col]).strip() if pd.notna(row[cro_col]) else ""
+                situacao = str(row[situacao_col]).strip() if situacao_col and pd.notna(row[situacao_col]) else ""
+                
+                # Construir outras informações (colunas extras)
+                outras_info = {}
+                for col in df.columns:
+                    if col not in [name_col, cro_col, situacao_col]:
+                        value = row[col]
+                        if pd.notna(value):
+                            outras_info[col] = str(value).strip()
+                
+                outras_informacoes = str(outras_info) if outras_info else ""
+                
+                # Validar dados obrigatórios
+                if nome and numero_cro:
+                    profissional = ProfissionalApto(
+                        nome=nome,
+                        numero_cro=numero_cro,
+                        situacao=situacao,
+                        outras_informacoes=outras_informacoes,
+                        imported_at=datetime.now(timezone.utc)
+                    )
+                    db.add(profissional)
+                    success_count += 1
+            
+            db.commit()
+            
+            return templates.TemplateResponse("pesquisa_profissional.html", {
+                "request": request,
+                "current_user": current_user,
+                "current_username": current_username,
+                "current_user_fullname": get_user_full_name(current_username),
+                "can_access_reports": can_access_reports(current_username),
+                "can_edit_delete": can_edit_delete(current_username),
+                "success_message": f"CSV importado com sucesso! {success_count} profissionais cadastrados.",
+            })
+            
+        finally:
+            db.close()
+            
+    except Exception as e:
+        return templates.TemplateResponse("pesquisa_profissional.html", {
+            "request": request,
+            "current_user": current_user,
+            "current_username": current_username,
+            "current_user_fullname": get_user_full_name(current_username),
+            "can_access_reports": can_access_reports(current_username),
+            "can_edit_delete": can_edit_delete(current_username),
+            "error_message": f"Erro ao processar CSV: {str(e)}",
+        })
+
+@app.get("/api/pesquisar-profissional")
+def pesquisar_profissional(
+    request: Request,
+    q: str = "",  # Query de pesquisa
+    session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)
+):
+    """API para pesquisar profissionais por nome ou CRO"""
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        raise HTTPException(status_code=401, detail="Não autorizado")
+    
+    if not q or len(q.strip()) < 2:
+        return {"results": [], "message": "Digite pelo menos 2 caracteres para pesquisar"}
+    
+    query = q.strip()
+    
+    db = SessionLocal()
+    try:
+        # Pesquisar por nome (LIKE) ou número CRO (exato)
+        results = db.query(ProfissionalApto).filter(
+            (ProfissionalApto.nome.ilike(f"%{query}%")) |
+            (ProfissionalApto.numero_cro == query)
+        ).limit(50).all()  # Limitar a 50 resultados
+        
+        # Converter para dicionário para JSON
+        profissionais = []
+        for p in results:
+            outras_info = {}
+            try:
+                if p.outras_informacoes:
+                    import ast
+                    outras_info = ast.literal_eval(p.outras_informacoes)
+            except:
+                outras_info = {}
+            
+            profissionais.append({
+                "id": p.id,
+                "nome": p.nome,
+                "numero_cro": p.numero_cro,
+                "situacao": p.situacao or "",
+                "outras_informacoes": outras_info,
+                "data_importacao": format_sp(p.imported_at)
+            })
+        
+        return {
+            "results": profissionais,
+            "total": len(profissionais),
+            "query": query
+        }
+        
+    finally:
+        db.close()
