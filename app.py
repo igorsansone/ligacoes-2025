@@ -1091,32 +1091,43 @@ async def upload_csv_profissionais(
         raise HTTPException(status_code=403, detail="Acesso negado - Apenas administradores podem importar CSV")
     
     # Validar tipo de arquivo
-    if not csv_file.filename or not csv_file.filename.lower().endswith('.csv'):
-        return templates.TemplateResponse("pesquisa_profissional.html", {
-            "request": request,
-            "current_user": current_user,
-            "current_username": current_username,
-            "current_user_fullname": get_user_full_name(current_username),
-            "can_access_reports": can_access_reports(current_username),
-            "can_edit_delete": can_edit_delete(current_username),
-            "error_message": "Por favor, envie um arquivo CSV válido (.csv)",
-        })
+    allowed_extensions = ['.csv', '.xls', '.xlsx']
+    file_extension = None
+    if csv_file.filename:
+        file_extension = csv_file.filename.lower().split('.')[-1]
+        if f'.{file_extension}' not in allowed_extensions:
+            return templates.TemplateResponse("pesquisa_profissional.html", {
+                "request": request,
+                "current_user": current_user,
+                "current_username": current_username,
+                "current_user_fullname": get_user_full_name(current_username),
+                "can_access_reports": can_access_reports(current_username),
+                "can_edit_delete": can_edit_delete(current_username),
+                "error_message": "Por favor, envie um arquivo válido (.csv, .xls, .xlsx)",
+            })
     
     try:
         # Ler conteúdo do arquivo
         content = await csv_file.read()
-        csv_string = content.decode('utf-8')
         
-        # Processar dados CSV
+        # Processar dados conforme o tipo de arquivo
         import pandas as pd
-        from io import StringIO
+        from io import StringIO, BytesIO
         
-        # Ler CSV da string
-        df = pd.read_csv(StringIO(csv_string))
+        # Determinar como ler o arquivo baseado na extensão
+        if file_extension == 'csv':
+            # Para CSV, decodificar como texto
+            csv_string = content.decode('utf-8')
+            df = pd.read_csv(StringIO(csv_string))
+        elif file_extension in ['xls', 'xlsx']:
+            # Para Excel, ler direto dos bytes
+            df = pd.read_excel(BytesIO(content), engine='openpyxl' if file_extension == 'xlsx' else 'xlrd')
+        else:
+            raise ValueError("Formato de arquivo não suportado")
         
         # Validar se o DataFrame não está vazio
         if df.empty:
-            raise ValueError("O arquivo CSV está vazio")
+            raise ValueError("O arquivo está vazio")
         
         # Mapear colunas possíveis (ignorando case e espaços)
         available_cols = [col.lower().strip() for col in df.columns]
@@ -1227,7 +1238,7 @@ async def upload_csv_profissionais(
                 "current_user_fullname": get_user_full_name(current_username),
                 "can_access_reports": can_access_reports(current_username),
                 "can_edit_delete": can_edit_delete(current_username),
-                "success_message": f"CSV importado com sucesso! {success_count} profissionais cadastrados.",
+                "success_message": f"Planilha importada com sucesso! {success_count} profissionais cadastrados.",
             })
             
         finally:
@@ -1241,7 +1252,7 @@ async def upload_csv_profissionais(
             "current_user_fullname": get_user_full_name(current_username),
             "can_access_reports": can_access_reports(current_username),
             "can_edit_delete": can_edit_delete(current_username),
-            "error_message": f"Erro ao processar CSV: {str(e)}",
+            "error_message": f"Erro ao processar planilha: {str(e)}",
         })
 
 @app.get("/api/pesquisar-profissional")
