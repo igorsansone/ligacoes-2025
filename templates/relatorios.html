@@ -130,7 +130,9 @@
             </button>
           </div>
         </div>
-        <canvas id="chartDuvida" style="border-radius: 12px; height: 350px;"></canvas>
+        <div class="chart-container" style="position: relative; height: 350px; max-height: 400px;">
+          <canvas id="chartDuvida" style="border-radius: 12px;"></canvas>
+        </div>
         <div class="small text-muted mt-3 p-2 bg-light rounded-3" id="totalDuvidas"></div>
       </div>
     </div>
@@ -160,7 +162,9 @@
             </button>
           </div>
         </div>
-        <canvas id="chartDia" style="border-radius: 12px; height: 350px;"></canvas>
+        <div class="chart-container" style="position: relative; height: 350px; max-height: 400px;">
+          <canvas id="chartDia" style="border-radius: 12px;"></canvas>
+        </div>
         <div class="form-text mt-3 p-2 bg-light rounded-3">
           <i class="fas fa-info-circle text-primary me-1"></i>
           Arraste para <strong>zoom</strong> (horizontal). Use a roda do mouse para zoom. Segure <strong>Alt</strong> para pan.
@@ -195,7 +199,9 @@
             </button>
           </div>
         </div>
-        <canvas id="chartComparativo" style="border-radius: 12px; height: 300px;"></canvas>
+        <div class="chart-container" style="position: relative; height: 280px; max-height: 320px;">
+          <canvas id="chartComparativo" style="border-radius: 12px;"></canvas>
+        </div>
         <div class="small text-muted mt-3 p-2 bg-light rounded-3" id="totalComparativo"></div>
       </div>
     </div>
@@ -218,7 +224,9 @@
             </button>
           </div>
         </div>
-        <canvas id="chartHorario" style="border-radius: 12px; height: 300px;"></canvas>
+        <div class="chart-container" style="position: relative; height: 280px; max-height: 320px;">
+          <canvas id="chartHorario" style="border-radius: 12px;"></canvas>
+        </div>
         <div class="small text-muted mt-3 p-2 bg-light rounded-3" id="totalHorarios"></div>
       </div>
     </div>
@@ -249,7 +257,9 @@
             </button>
           </div>
         </div>
-        <canvas id="chartAtendente" style="border-radius: 12px; height: 350px;"></canvas>
+        <div class="chart-container" style="position: relative; height: 350px; max-height: 400px;">
+          <canvas id="chartAtendente" style="border-radius: 12px;"></canvas>
+        </div>
         <div class="small text-muted mt-3 p-2 bg-light rounded-3" id="totalAtendentes"></div>
       </div>
     </div>
@@ -402,9 +412,23 @@ const chartAnimation = {
   delay: (context) => context.dataIndex * 100
 };
 
+// Global KPI data store to persist values across function calls
+window.kpiData = {
+  total: '0',
+  mediaDiaria: '0',
+  picoHorario: '--:--',
+  atendentesAtivos: '0'
+};
+
 // Function to update KPI cards
 function updateKPICards(data) {
-  // This will be populated with real data from chart loading functions
+  // Update global KPI data with provided values only
+  if (data.total !== undefined) window.kpiData.total = data.total.toLocaleString ? data.total.toLocaleString('pt-BR') : data.total.toString();
+  if (data.mediaDiaria !== undefined) window.kpiData.mediaDiaria = data.mediaDiaria;
+  if (data.picoHorario !== undefined) window.kpiData.picoHorario = data.picoHorario;
+  if (data.atendentesAtivos !== undefined) window.kpiData.atendentesAtivos = data.atendentesAtivos;
+
+  // Get elements and update with current values
   const kpiElements = {
     total: document.getElementById('kpiTotalLigacoes'),
     media: document.getElementById('kpiMediaDiaria'),
@@ -412,11 +436,11 @@ function updateKPICards(data) {
     atendentes: document.getElementById('kpiAtendentesAtivos')
   };
 
-  // Set default values if elements exist
-  if (kpiElements.total) kpiElements.total.textContent = data.total || '0';
-  if (kpiElements.media) kpiElements.media.textContent = data.mediaDiaria || '0';
-  if (kpiElements.pico) kpiElements.pico.textContent = data.picoHorario || '--:--';
-  if (kpiElements.atendentes) kpiElements.atendentes.textContent = data.atendentesAtivos || '0';
+  // Update display with current data
+  if (kpiElements.total) kpiElements.total.textContent = window.kpiData.total;
+  if (kpiElements.media) kpiElements.media.textContent = window.kpiData.mediaDiaria;
+  if (kpiElements.pico) kpiElements.pico.textContent = window.kpiData.picoHorario;
+  if (kpiElements.atendentes) kpiElements.atendentes.textContent = window.kpiData.atendentesAtivos;
 }
 
 const elStart = document.getElementById('fStart');
@@ -1121,14 +1145,78 @@ function exportData(type, format) {
   window.open(url, '_blank');
 }
 
+// Comprehensive KPI update function that aggregates data from all sources
+async function updateAllKPIs() {
+  try {
+    const q = buildQuery();
+    
+    // Get data from all endpoints simultaneously
+    const [duvidaRes, diaRes, horariosRes, atendenteRes] = await Promise.all([
+      fetch('/api/stats/por_duvida' + (q ? '?' + q : '')),
+      fetch('/api/stats/por_dia' + (q ? '?' + q : '')),
+      fetch('/api/stats/pico_horarios' + (q ? '?' + q : '')),
+      fetch('/api/stats/por_atendente' + (q ? '?' + q : ''))
+    ]);
+    
+    // Parse all responses
+    const [duvidaData, diaData, horariosData, atendenteData] = await Promise.all([
+      duvidaRes.ok ? duvidaRes.json() : null,
+      diaRes.ok ? diaRes.json() : null,
+      horariosRes.ok ? horariosRes.json() : null,
+      atendenteRes.ok ? atendenteRes.json() : null
+    ]);
+    
+    // Calculate comprehensive KPI data
+    const kpiUpdate = {};
+    
+    // Total ligações (from duvida or dia data)
+    if (duvidaData?.total) {
+      kpiUpdate.total = duvidaData.total;
+    }
+    
+    // Média diária (from dia data)
+    if (diaData?.counts?.length) {
+      const total = diaData.counts.reduce((a, b) => a + b, 0);
+      const media = total / diaData.counts.length;
+      kpiUpdate.mediaDiaria = Math.round(media).toLocaleString('pt-BR');
+    }
+    
+    // Pico horário (from horarios data)
+    if (horariosData?.counts?.length) {
+      const maxIndex = horariosData.counts.indexOf(Math.max(...horariosData.counts));
+      const maxHour = maxIndex >= 0 ? horariosData.labels[maxIndex] : '--:--';
+      const maxValue = maxIndex >= 0 ? Math.max(...horariosData.counts) : 0;
+      kpiUpdate.picoHorario = `${maxHour} (${maxValue.toLocaleString('pt-BR')})`;
+    }
+    
+    // Atendentes ativos (from atendente data)
+    if (atendenteData?.labels?.length) {
+      // Count attendants with at least one call
+      const activeAttendees = atendenteData.counts.filter(count => count > 0).length;
+      kpiUpdate.atendentesAtivos = activeAttendees.toString();
+    }
+    
+    // Update all KPI cards at once
+    updateKPICards(kpiUpdate);
+    console.log('KPI cards updated comprehensively:', kpiUpdate);
+    
+  } catch (error) {
+    console.error('Error updating KPIs comprehensively:', error);
+  }
+}
+
 /* Botões e eventos */
 document.getElementById('btnAplicar').addEventListener('click', () => {
   loadDuvida(); loadDia(); loadComparativo(); loadHorarios(); loadAtendentes();
+  // Update KPIs after all charts are loaded
+  setTimeout(updateAllKPIs, 1000);
 });
 document.getElementById('btnLimpar').addEventListener('click', () => {
   elStart.value = ''; elEnd.value = '';
   Array.from(elTipos.options).forEach(o=>o.selected=false);
   loadDuvida(); loadDia(); loadComparativo(); loadHorarios(); loadAtendentes();
+  // Update KPIs after all charts are loaded
+  setTimeout(updateAllKPIs, 1000);
 });
 
 document.getElementById('btnTipoBar').addEventListener('click', () => {
@@ -1177,6 +1265,8 @@ document.addEventListener('DOMContentLoaded', function() {
       loadComparativo(); 
       loadHorarios(); 
       loadAtendentes();
+      // Update KPIs after initial chart loading
+      setTimeout(updateAllKPIs, 1500);
     } else if (checkAttempts < maxAttempts) {
       setTimeout(checkAndInitialize, 500);
     } else {
@@ -1187,6 +1277,8 @@ document.addEventListener('DOMContentLoaded', function() {
       loadComparativo(); 
       loadHorarios(); 
       loadAtendentes();
+      // Still try to update KPIs
+      setTimeout(updateAllKPIs, 1000);
     }
   }
   
