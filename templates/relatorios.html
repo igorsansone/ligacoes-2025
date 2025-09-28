@@ -1,6 +1,39 @@
 {% extends "base.html" %}
 {% block content %}
 
+<!-- Additional responsive styles for charts -->
+<style>
+/* Chart container responsiveness */
+.chart-container { 
+  min-height: 200px; 
+}
+
+/* Mobile responsiveness for charts */
+@media (max-width: 768px) {
+  .chart-container { 
+    height: 280px !important; 
+    max-height: 320px !important; 
+  }
+}
+
+@media (max-width: 576px) {
+  .chart-container { 
+    height: 240px !important; 
+    max-height: 280px !important; 
+  }
+  
+  /* Smaller KPI cards on mobile */
+  #kpiCards h2 {
+    font-size: 1.5rem !important;
+  }
+  
+  /* Adjust card body padding on mobile */
+  .card-body {
+    padding: 1rem !important;
+  }
+}
+</style>
+
 <!-- Cabeçalho específico para impressão (aparece no PDF) -->
 <div class="only-print mb-3">
   <div class="d-flex align-items-center gap-3">
