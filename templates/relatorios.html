@@ -21,21 +21,73 @@
   </div>
 </div>
 
+<!-- KPI Cards Dashboard -->
+<div class="row g-4 mb-4 no-print" id="kpiCards">
+  <div class="col-md-3">
+    <div class="card bg-gradient-primary text-white border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div class="card-body text-center">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+          <i class="fas fa-phone fa-2x opacity-75"></i>
+        </div>
+        <h2 class="fw-bold mb-1" id="kpiTotalLigacoes">-</h2>
+        <p class="mb-0 opacity-90">Total de Ligações</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-gradient-success text-white border-0" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+      <div class="card-body text-center">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+          <i class="fas fa-chart-line fa-2x opacity-75"></i>
+        </div>
+        <h2 class="fw-bold mb-1" id="kpiMediaDiaria">-</h2>
+        <p class="mb-0 opacity-90">Média Diária</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-gradient-warning text-white border-0" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+      <div class="card-body text-center">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+          <i class="fas fa-clock fa-2x opacity-75"></i>
+        </div>
+        <h2 class="fw-bold mb-1" id="kpiPicoHorario">-</h2>
+        <p class="mb-0 opacity-90">Pico Horário</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-gradient-info text-white border-0" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+      <div class="card-body text-center">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+          <i class="fas fa-users fa-2x opacity-75"></i>
+        </div>
+        <h2 class="fw-bold mb-1" id="kpiAtendentesAtivos">-</h2>
+        <p class="mb-0 opacity-90">Atendentes Ativos</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Filtros -->
-<div class="card shadow-sm mb-4 no-print">
+<div class="card shadow-lg mb-4 no-print" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
   <div class="card-body">
+    <div class="d-flex align-items-center mb-3">
+      <i class="fas fa-filter text-primary me-2"></i>
+      <h5 class="mb-0 text-primary">Filtros de Dados</h5>
+    </div>
     <form class="row g-3 align-items-end">
       <div class="col-sm-3">
-        <label class="form-label">Início</label>
-        <input type="date" id="fStart" class="form-control">
+        <label class="form-label fw-semibold">Início</label>
+        <input type="date" id="fStart" class="form-control" style="border-radius: 10px;">
       </div>
       <div class="col-sm-3">
-        <label class="form-label">Fim</label>
-        <input type="date" id="fEnd" class="form-control">
+        <label class="form-label fw-semibold">Fim</label>
+        <input type="date" id="fEnd" class="form-control" style="border-radius: 10px;">
       </div>
       <div class="col-sm-4">
-        <label class="form-label">Tipo de Dúvida (multi)</label>
-        <select id="fTipos" class="form-select" multiple size="4">
+        <label class="form-label fw-semibold">Tipo de Dúvida (multi)</label>
+        <select id="fTipos" class="form-select" multiple size="4" style="border-radius: 10px;">
           {% for opt in duvida_opcoes %}
           <option value="{{ opt }}">{{ opt }}</option>
           {% endfor %}
@@ -43,8 +95,12 @@
         <div class="form-text">Segure CTRL (ou CMD) para selecionar múltiplos.</div>
       </div>
       <div class="col-sm-2 d-flex gap-2">
-        <button type="button" id="btnAplicar" class="btn btn-primary w-100">Aplicar</button>
-        <button type="button" id="btnLimpar" class="btn btn-outline-secondary">Limpar</button>
+        <button type="button" id="btnAplicar" class="btn btn-primary w-100" style="border-radius: 10px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+          <i class="fas fa-search me-1"></i>Aplicar
+        </button>
+        <button type="button" id="btnLimpar" class="btn btn-outline-secondary" style="border-radius: 10px;">
+          <i class="fas fa-eraser me-1"></i>Limpar
+        </button>
       </div>
     </form>
   </div>
@@ -53,39 +109,62 @@
 <div class="row g-4">
   <!-- Por Tipo -->
   <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="card-title m-0">Distribuição por Tipo de Dúvida</h6>
+    <div class="card border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center">
+            <div class="p-2 me-2 rounded-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <i class="fas fa-chart-pie text-white"></i>
+            </div>
+            <h5 class="card-title m-0 fw-bold text-dark">Distribuição por Tipo de Dúvida</h5>
+          </div>
           <div class="no-print d-flex gap-2">
-            <button id="btnTipoBar" class="btn btn-sm btn-outline-primary">Barra</button>
-            <button id="btnTipoPie" class="btn btn-sm btn-outline-primary">Pizza</button>
-            <button id="btnTipoDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+            <button id="btnTipoBar" class="btn btn-sm btn-outline-primary" style="border-radius: 8px; border-width: 2px;">
+              <i class="fas fa-chart-bar me-1"></i>Barra
+            </button>
+            <button id="btnTipoPie" class="btn btn-sm btn-outline-primary" style="border-radius: 8px; border-width: 2px;">
+              <i class="fas fa-chart-pie me-1"></i>Pizza
+            </button>
+            <button id="btnTipoDownload" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px;">
+              <i class="fas fa-download me-1"></i>PNG
+            </button>
           </div>
         </div>
-        <canvas id="chartDuvida"></canvas>
-        <div class="small text-muted mt-2" id="totalDuvidas"></div>
+        <canvas id="chartDuvida" style="border-radius: 12px; height: 350px;"></canvas>
+        <div class="small text-muted mt-3 p-2 bg-light rounded-3" id="totalDuvidas"></div>
       </div>
     </div>
   </div>
 
   <!-- Por Dia -->
   <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="card-title m-0">Ligações por Dia (BR/RS)</h6>
+    <div class="card border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center">
+            <div class="p-2 me-2 rounded-3" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+              <i class="fas fa-chart-line text-white"></i>
+            </div>
+            <h5 class="card-title m-0 fw-bold text-dark">Ligações por Dia (BR/RS)</h5>
+          </div>
           <div class="no-print d-flex flex-wrap gap-2">
             <div class="form-check me-2">
               <input class="form-check-input" type="checkbox" id="chkMedia">
-              <label class="form-check-label" for="chkMedia">Média móvel 7d</label>
+              <label class="form-check-label fw-medium" for="chkMedia">Média móvel 7d</label>
             </div>
-            <button id="btnZoomReset" class="btn btn-sm btn-outline-secondary">Reset Zoom</button>
-            <button id="btnDiaDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+            <button id="btnZoomReset" class="btn btn-sm btn-outline-success" style="border-radius: 8px; border-width: 2px;">
+              <i class="fas fa-search-minus me-1"></i>Reset
+            </button>
+            <button id="btnDiaDownload" class="btn btn-sm" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 8px;">
+              <i class="fas fa-download me-1"></i>PNG
+            </button>
           </div>
         </div>
-        <canvas id="chartDia"></canvas>
-        <div class="form-text mt-2">Arraste para **zoom** (horizontal). Use a roda do mouse para zoom. Segure **Alt** para pan.</div>
+        <canvas id="chartDia" style="border-radius: 12px; height: 350px;"></canvas>
+        <div class="form-text mt-3 p-2 bg-light rounded-3">
+          <i class="fas fa-info-circle text-primary me-1"></i>
+          Arraste para <strong>zoom</strong> (horizontal). Use a roda do mouse para zoom. Segure <strong>Alt</strong> para pan.
+        </div>
       </div>
     </div>
   </div>
@@ -95,38 +174,52 @@
 <div class="row g-4 mt-2">
   <!-- Comparativo por Período -->
   <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="card-title m-0">Comparativo por Período</h6>
+    <div class="card border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center">
+            <div class="p-2 me-2 rounded-3" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+              <i class="fas fa-chart-area text-white"></i>
+            </div>
+            <h5 class="card-title m-0 fw-bold text-dark">Comparativo por Período</h5>
+          </div>
           <div class="no-print d-flex gap-2">
-            <select id="selPeriodo" class="form-select form-select-sm" style="width: auto;">
+            <select id="selPeriodo" class="form-select form-select-sm" style="width: auto; border-radius: 8px; border-width: 2px;">
               <option value="dia">Por Dia</option>
               <option value="semana">Por Semana</option>
               <option value="mes">Por Mês</option>
               <option value="ano">Por Ano</option>
             </select>
-            <button id="btnComparativoDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+            <button id="btnComparativoDownload" class="btn btn-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 8px;">
+              <i class="fas fa-download me-1"></i>PNG
+            </button>
           </div>
         </div>
-        <canvas id="chartComparativo"></canvas>
-        <div class="small text-muted mt-2" id="totalComparativo"></div>
+        <canvas id="chartComparativo" style="border-radius: 12px; height: 300px;"></canvas>
+        <div class="small text-muted mt-3 p-2 bg-light rounded-3" id="totalComparativo"></div>
       </div>
     </div>
   </div>
 
   <!-- Pico de Horários -->
   <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="card-title m-0">Pico de Horários</h6>
+    <div class="card border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center">
+            <div class="p-2 me-2 rounded-3" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+              <i class="fas fa-clock text-white"></i>
+            </div>
+            <h5 class="card-title m-0 fw-bold text-dark">Pico de Horários</h5>
+          </div>
           <div class="no-print d-flex gap-2">
-            <button id="btnHorarioDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+            <button id="btnHorarioDownload" class="btn btn-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; border-radius: 8px;">
+              <i class="fas fa-download me-1"></i>PNG
+            </button>
           </div>
         </div>
-        <canvas id="chartHorario"></canvas>
-        <div class="small text-muted mt-2" id="totalHorarios"></div>
+        <canvas id="chartHorario" style="border-radius: 12px; height: 300px;"></canvas>
+        <div class="small text-muted mt-3 p-2 bg-light rounded-3" id="totalHorarios"></div>
       </div>
     </div>
   </div>
@@ -135,44 +228,77 @@
 <div class="row g-4 mt-2">
   <!-- Por Atendente -->
   <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="card-title m-0">Ligações por Atendente</h6>
+    <div class="card border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center">
+            <div class="p-2 me-2 rounded-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <i class="fas fa-users text-white"></i>
+            </div>
+            <h5 class="card-title m-0 fw-bold text-dark">Ligações por Atendente</h5>
+          </div>
           <div class="no-print d-flex gap-2">
-            <button id="btnAtendenteBarra" class="btn btn-sm btn-outline-primary">Barra</button>
-            <button id="btnAtendentePizza" class="btn btn-sm btn-outline-primary">Pizza</button>
-            <button id="btnAtendenteDownload" class="btn btn-sm btn-outline-secondary">Baixar PNG</button>
+            <button id="btnAtendenteBarra" class="btn btn-sm btn-outline-primary" style="border-radius: 8px; border-width: 2px;">
+              <i class="fas fa-chart-bar me-1"></i>Barra
+            </button>
+            <button id="btnAtendentePizza" class="btn btn-sm btn-outline-primary" style="border-radius: 8px; border-width: 2px;">
+              <i class="fas fa-chart-pie me-1"></i>Pizza
+            </button>
+            <button id="btnAtendenteDownload" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px;">
+              <i class="fas fa-download me-1"></i>PNG
+            </button>
           </div>
         </div>
-        <canvas id="chartAtendente"></canvas>
-        <div class="small text-muted mt-2" id="totalAtendentes"></div>
+        <canvas id="chartAtendente" style="border-radius: 12px; height: 350px;"></canvas>
+        <div class="small text-muted mt-3 p-2 bg-light rounded-3" id="totalAtendentes"></div>
       </div>
     </div>
   </div>
 
   <!-- Exportar Dados -->
   <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title">Exportar Relatórios</h6>
-        <p class="text-muted small">Exporte os dados filtrados em diferentes formatos</p>
+    <div class="card border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center mb-3">
+          <div class="p-2 me-2 rounded-3" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+            <i class="fas fa-file-export text-white"></i>
+          </div>
+          <h5 class="card-title m-0 fw-bold text-dark">Exportar Relatórios</h5>
+        </div>
+        <p class="text-muted mb-4">Exporte os dados filtrados em diferentes formatos</p>
         
-        <div class="row g-2">
+        <div class="row g-3">
           <div class="col-6">
-            <h6 class="small">Resumido</h6>
-            <button id="btnExportCSVResumo" class="btn btn-sm btn-outline-success w-100 mb-1">CSV Resumo</button>
-            <button id="btnExportPDFResumo" class="btn btn-sm btn-outline-danger w-100">PDF Resumo</button>
+            <div class="bg-light p-3 rounded-3">
+              <h6 class="fw-bold text-dark mb-3">
+                <i class="fas fa-file-alt text-success me-2"></i>Resumido
+              </h6>
+              <button id="btnExportCSVResumo" class="btn btn-success w-100 mb-2" style="border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);">
+                <i class="fas fa-file-csv me-1"></i>CSV Resumo
+              </button>
+              <button id="btnExportPDFResumo" class="btn btn-outline-danger w-100" style="border-radius: 10px; border-width: 2px;">
+                <i class="fas fa-file-pdf me-1"></i>PDF Resumo
+              </button>
+            </div>
           </div>
           <div class="col-6">
-            <h6 class="small">Detalhado</h6>
-            <button id="btnExportCSVDetalhado" class="btn btn-sm btn-outline-success w-100 mb-1">CSV Completo</button>
-            <button id="btnExportPDFDetalhado" class="btn btn-sm btn-outline-danger w-100">PDF Completo</button>
+            <div class="bg-light p-3 rounded-3">
+              <h6 class="fw-bold text-dark mb-3">
+                <i class="fas fa-database text-info me-2"></i>Detalhado
+              </h6>
+              <button id="btnExportCSVDetalhado" class="btn btn-success w-100 mb-2" style="border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);">
+                <i class="fas fa-file-csv me-1"></i>CSV Completo
+              </button>
+              <button id="btnExportPDFDetalhado" class="btn btn-outline-danger w-100" style="border-radius: 10px; border-width: 2px;">
+                <i class="fas fa-file-pdf me-1"></i>PDF Completo
+              </button>
+            </div>
           </div>
         </div>
         
-        <div class="form-text mt-2">
-          Os filtros aplicados serão considerados na exportação.
+        <div class="alert alert-info mt-4" style="border: none; background: linear-gradient(135deg, rgba(75, 192, 192, 0.1) 0%, rgba(54, 162, 235, 0.1) 100%); border-radius: 10px;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Nota:</strong> Os filtros aplicados serão considerados na exportação.
         </div>
       </div>
     </div>
@@ -222,6 +348,77 @@ setTimeout(() => {
 }, 2000);
 </script>
 <script>
+// Modern color palette for charts
+const chartColors = {
+  primary: ['#667eea', '#764ba2', '#4facfe', '#00f2fe'],
+  gradient: {
+    purple: ['#667eea', '#764ba2'],
+    blue: ['#4facfe', '#00f2fe'],
+    green: ['#11998e', '#38ef7d'],
+    pink: ['#f093fb', '#f5576c'],
+    orange: ['#ffecd2', '#fcb69f']
+  },
+  rainbow: [
+    '#667eea', '#764ba2', '#4facfe', '#00f2fe',
+    '#11998e', '#38ef7d', '#f093fb', '#f5576c',
+    '#ffecd2', '#fcb69f', '#a8edea', '#fed6e3'
+  ]
+};
+
+// Function to create gradient background
+function createGradient(ctx, colors, direction = 'vertical') {
+  // Handle canvas context or chart context
+  const canvas = ctx.canvas || ctx;
+  const context = ctx.getContext ? ctx.getContext('2d') : ctx;
+  
+  const gradient = direction === 'vertical' 
+    ? context.createLinearGradient(0, 0, 0, canvas.height || 400)
+    : context.createLinearGradient(0, 0, canvas.width || 400, 0);
+  
+  gradient.addColorStop(0, colors[0]);
+  gradient.addColorStop(1, colors[1]);
+  return gradient;
+}
+
+// Enhanced Chart.js default configuration
+Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+Chart.defaults.font.size = 13;
+Chart.defaults.color = '#374151';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.boxWidth = 8;
+Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+Chart.defaults.plugins.tooltip.titleColor = '#1f2937';
+Chart.defaults.plugins.tooltip.bodyColor = '#4b5563';
+Chart.defaults.plugins.tooltip.borderColor = '#e5e7eb';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.cornerRadius = 10;
+Chart.defaults.plugins.tooltip.displayColors = true;
+Chart.defaults.plugins.tooltip.padding = 12;
+
+// Animation configuration
+const chartAnimation = {
+  duration: 1200,
+  easing: 'easeOutQuart',
+  delay: (context) => context.dataIndex * 100
+};
+
+// Function to update KPI cards
+function updateKPICards(data) {
+  // This will be populated with real data from chart loading functions
+  const kpiElements = {
+    total: document.getElementById('kpiTotalLigacoes'),
+    media: document.getElementById('kpiMediaDiaria'),
+    pico: document.getElementById('kpiPicoHorario'),
+    atendentes: document.getElementById('kpiAtendentesAtivos')
+  };
+
+  // Set default values if elements exist
+  if (kpiElements.total) kpiElements.total.textContent = data.total || '0';
+  if (kpiElements.media) kpiElements.media.textContent = data.mediaDiaria || '0';
+  if (kpiElements.pico) kpiElements.pico.textContent = data.picoHorario || '--:--';
+  if (kpiElements.atendentes) kpiElements.atendentes.textContent = data.atendentesAtivos || '0';
+}
+
 const elStart = document.getElementById('fStart');
 const elEnd = document.getElementById('fEnd');
 const elTipos = document.getElementById('fTipos');
@@ -318,7 +515,15 @@ async function loadDuvida() {
     destroyChart(chartDuvida);
 
     const total = data.total || data.counts.reduce((a,b)=>a+b,0);
-    document.getElementById('totalDuvidas').innerText = `Total de ligações no período: ${total}`;
+    document.getElementById('totalDuvidas').innerHTML = `
+      <i class="fas fa-chart-pie text-primary me-2"></i>
+      <strong>Total de ligações:</strong> ${total.toLocaleString('pt-BR')}
+    `;
+
+    // Create gradients for backgrounds
+    const backgroundColors = window._tipoDuvida === 'pie' 
+      ? chartColors.rainbow.slice(0, data.labels.length)
+      : chartColors.rainbow.slice(0, data.labels.length).map(color => color + '80'); // 50% opacity
 
     chartDuvida = new Chart(ctx, {
       type: window._tipoDuvida || 'bar',
@@ -326,28 +531,61 @@ async function loadDuvida() {
         labels: data.labels || [],
         datasets: [{
           label: 'Quantidade',
-          data: data.counts || []
+          data: data.counts || [],
+          backgroundColor: backgroundColors,
+          borderColor: chartColors.gradient.purple[0],
+          borderWidth: window._tipoDuvida === 'pie' ? 0 : 2,
+          borderRadius: window._tipoDuvida === 'pie' ? 0 : 8,
+          borderSkipped: false,
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
+        animation: chartAnimation,
         plugins: {
-          legend: { display: false },
+          legend: { 
+            display: window._tipoDuvida === 'pie',
+            position: 'bottom',
+            labels: {
+              padding: 20,
+              font: { weight: '500' }
+            }
+          },
           tooltip: {
             callbacks: {
               label: (ctx) => {
                 const val = ctx.raw ?? 0;
-                return `${val} (${pct(val, total)})`;
+                const percentage = pct(val, total);
+                return `${ctx.label}: ${val.toLocaleString('pt-BR')} (${percentage})`;
               }
             }
           }
         },
         scales: window._tipoDuvida === 'pie' ? {} : {
-          x: { ticks: { autoSkip: false } },
-          y: { beginAtZero: true }
+          x: { 
+            ticks: { 
+              autoSkip: false,
+              font: { weight: '500' }
+            },
+            grid: { display: false }
+          },
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              font: { weight: '500' },
+              callback: function(value) {
+                return value.toLocaleString('pt-BR');
+              }
+            },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          }
         }
       }
     });
+
+    // Update KPI cards
+    updateKPICards({ total: total });
     
     console.log('Duvida chart created successfully');
   } catch (error) {
@@ -402,7 +640,17 @@ async function loadDia() {
 
     const baseDataset = {
       label: 'Ligações por dia',
-      data: data.counts || []
+      data: data.counts || [],
+      borderColor: chartColors.gradient.green[0],
+      backgroundColor: chartColors.gradient.green[0] + '20', // 12.5% opacity
+      borderWidth: 3,
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: chartColors.gradient.green[0],
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7
     };
     const datasets = [baseDataset];
 
@@ -410,18 +658,54 @@ async function loadDia() {
       datasets.push({
         label: 'Média móvel 7d',
         data: movingAverage(data.counts || [], 7),
+        borderColor: chartColors.gradient.pink[0],
+        backgroundColor: 'rgba(240, 147, 251, 0.1)',
         borderWidth: 2,
-        tension: 0.2
+        tension: 0.2,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        fill: false,
+        borderDash: [5, 5]
       });
     }
+
+    const total = data.counts.reduce((a, b) => a + b, 0);
+    const media = total / data.counts.length || 0;
 
     chartDia = new Chart(ctx, {
       type: 'line',
       data: { labels: data.labels || [], datasets },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 1500,
+          easing: 'easeOutQuart'
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
         plugins: {
-          legend: { display: true },
+          legend: { 
+            display: true,
+            position: 'top',
+            labels: {
+              padding: 20,
+              usePointStyle: true,
+              font: { weight: '500' }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              title: function(context) {
+                return `Data: ${context[0].label}`;
+              },
+              label: function(context) {
+                return `${context.dataset.label}: ${context.raw.toLocaleString('pt-BR')}`;
+              }
+            }
+          },
           zoom: {
             zoom: {
               wheel: { enabled: true },
@@ -436,9 +720,29 @@ async function loadDia() {
           }
         },
         scales: {
-          y: { beginAtZero: true }
+          x: {
+            ticks: {
+              font: { weight: '500' }
+            },
+            grid: { display: false }
+          },
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              font: { weight: '500' },
+              callback: function(value) {
+                return value.toLocaleString('pt-BR');
+              }
+            },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          }
         }
       }
+    });
+
+    // Update KPI cards with daily data
+    updateKPICards({ 
+      mediaDiaria: Math.round(media).toLocaleString('pt-BR')
     });
     
     console.log('Dia chart created successfully');
@@ -475,7 +779,10 @@ async function loadComparativo() {
     }
 
     const total = data.total || 0;
-    document.getElementById('totalComparativo').innerText = `Total no período (${data.periodo || periodo}): ${total}`;
+    document.getElementById('totalComparativo').innerHTML = `
+      <i class="fas fa-chart-area text-danger me-2"></i>
+      <strong>Total no período (${data.periodo || periodo}):</strong> ${total.toLocaleString('pt-BR')}
+    `;
 
     if (typeof Chart === 'undefined') {
       console.warn('Chart.js is not loaded - showing data as table for comparativo chart');
@@ -491,6 +798,11 @@ async function loadComparativo() {
     
     destroyChart(window.chartComparativo);
 
+    // Create gradient backgrounds for each bar
+    const backgroundColors = data.counts.map((value, index) => {
+      return chartColors.gradient.pink[0] + '80'; // 50% opacity
+    });
+
     window.chartComparativo = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -498,17 +810,49 @@ async function loadComparativo() {
         datasets: [{
           label: `Ligações por ${data.periodo || periodo}`,
           data: data.counts || [],
-          backgroundColor: 'rgba(54, 162, 235, 0.8)'
+          backgroundColor: backgroundColors,
+          borderColor: chartColors.gradient.pink[0],
+          borderWidth: 2,
+          borderRadius: 8,
+          borderSkipped: false,
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
+        animation: chartAnimation,
         plugins: {
-          legend: { display: false }
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function(context) {
+                return `${data.periodo || periodo}: ${context[0].label}`;
+              },
+              label: function(context) {
+                return `Ligações: ${context.raw.toLocaleString('pt-BR')}`;
+              }
+            }
+          }
         },
         scales: {
-          x: { ticks: { autoSkip: true, maxTicksLimit: 15 } },
-          y: { beginAtZero: true }
+          x: { 
+            ticks: { 
+              autoSkip: true, 
+              maxTicksLimit: 15,
+              font: { weight: '500' }
+            },
+            grid: { display: false }
+          },
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              font: { weight: '500' },
+              callback: function(value) {
+                return value.toLocaleString('pt-BR');
+              }
+            },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          }
         }
       }
     });
@@ -546,7 +890,11 @@ async function loadHorarios() {
     const maxIndex = data.counts.length > 0 ? data.counts.indexOf(Math.max(...data.counts)) : -1;
     const maxHour = maxIndex >= 0 ? data.labels[maxIndex] : 'N/A';
     const maxValue = maxIndex >= 0 ? Math.max(...data.counts) : 0;
-    document.getElementById('totalHorarios').innerText = `Total: ${total} | Pico: ${maxHour} (${maxValue} ligações)`;
+    document.getElementById('totalHorarios').innerHTML = `
+      <i class="fas fa-clock text-info me-2"></i>
+      <strong>Total:</strong> ${total.toLocaleString('pt-BR')} | 
+      <strong>Pico:</strong> ${maxHour} (${maxValue.toLocaleString('pt-BR')} ligações)
+    `;
 
     if (typeof Chart === 'undefined') {
       console.warn('Chart.js is not loaded - showing data as table for horarios chart');
@@ -567,6 +915,14 @@ async function loadHorarios() {
     
     destroyChart(window.chartHorario);
 
+    // Create gradient backgrounds for each bar
+    const backgroundColors = data.counts.map((value, index) => {
+      const intensity = value / Math.max(...data.counts);
+      return value === maxValue 
+        ? chartColors.gradient.pink[0] + '80'  // Peak hour - more intense
+        : chartColors.gradient.blue[0] + Math.floor(20 + intensity * 60).toString(16); // Variable intensity
+    });
+
     window.chartHorario = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -574,19 +930,55 @@ async function loadHorarios() {
         datasets: [{
           label: 'Ligações por hora',
           data: data.counts || [],
-          backgroundColor: 'rgba(255, 159, 64, 0.8)'
+          backgroundColor: backgroundColors,
+          borderColor: chartColors.gradient.blue[0],
+          borderWidth: 2,
+          borderRadius: 6,
+          borderSkipped: false,
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
+        animation: chartAnimation,
         plugins: {
-          legend: { display: false }
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function(context) {
+                return `Horário: ${context[0].label}`;
+              },
+              label: function(context) {
+                return `Ligações: ${context.raw.toLocaleString('pt-BR')}`;
+              }
+            }
+          }
         },
         scales: {
-          x: { ticks: { autoSkip: false } },
-          y: { beginAtZero: true }
+          x: { 
+            ticks: { 
+              autoSkip: false,
+              font: { weight: '500' }
+            },
+            grid: { display: false }
+          },
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              font: { weight: '500' },
+              callback: function(value) {
+                return value.toLocaleString('pt-BR');
+              }
+            },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          }
         }
       }
+    });
+
+    // Update KPI with peak hour info
+    updateKPICards({ 
+      picoHorario: maxHour
     });
     
     console.log('Horarios chart created successfully');
@@ -619,7 +1011,12 @@ async function loadAtendentes() {
     }
 
     const total = data.total || 0;
-    document.getElementById('totalAtendentes').innerText = `Total de ligações: ${total}`;
+    const activeAttendees = data.counts.filter(count => count > 0).length;
+    document.getElementById('totalAtendentes').innerHTML = `
+      <i class="fas fa-users text-primary me-2"></i>
+      <strong>Total de ligações:</strong> ${total.toLocaleString('pt-BR')} | 
+      <strong>Atendentes ativos:</strong> ${activeAttendees}
+    `;
 
     if (typeof Chart === 'undefined') {
       console.warn('Chart.js is not loaded - showing data as table for atendentes chart');
@@ -635,6 +1032,11 @@ async function loadAtendentes() {
     
     destroyChart(window.chartAtendente);
 
+    // Create color palette for attendees
+    const backgroundColors = window._tipoAtendente === 'pie' 
+      ? chartColors.rainbow.slice(0, data.labels.length)
+      : chartColors.rainbow.slice(0, data.labels.length).map(color => color + '80'); // 50% opacity
+
     window.chartAtendente = new Chart(ctx, {
       type: window._tipoAtendente || 'bar',
       data: {
@@ -642,27 +1044,65 @@ async function loadAtendentes() {
         datasets: [{
           label: 'Ligações',
           data: data.counts || [],
-          backgroundColor: 'rgba(75, 192, 192, 0.8)'
+          backgroundColor: backgroundColors,
+          borderColor: chartColors.gradient.purple[0],
+          borderWidth: window._tipoAtendente === 'pie' ? 0 : 2,
+          borderRadius: window._tipoAtendente === 'pie' ? 0 : 8,
+          borderSkipped: false,
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
+        animation: chartAnimation,
         plugins: {
-          legend: { display: false },
+          legend: { 
+            display: window._tipoAtendente === 'pie',
+            position: 'bottom',
+            labels: {
+              padding: 20,
+              font: { weight: '500' }
+            }
+          },
           tooltip: {
             callbacks: {
+              title: function(context) {
+                return window._tipoAtendente === 'pie' ? context[0].label : `Atendente: ${context[0].label}`;
+              },
               label: (ctx) => {
                 const val = ctx.raw ?? 0;
-                return `${val} (${pct(val, total)})`;
+                const percentage = pct(val, total);
+                return `Ligações: ${val.toLocaleString('pt-BR')} (${percentage})`;
               }
             }
           }
         },
         scales: window._tipoAtendente === 'pie' ? {} : {
-          x: { ticks: { autoSkip: false } },
-          y: { beginAtZero: true }
+          x: { 
+            ticks: { 
+              autoSkip: false,
+              maxRotation: 45,
+              font: { weight: '500' }
+            },
+            grid: { display: false }
+          },
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              font: { weight: '500' },
+              callback: function(value) {
+                return value.toLocaleString('pt-BR');
+              }
+            },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          }
         }
       }
+    });
+
+    // Update KPI with active attendees count
+    updateKPICards({ 
+      atendentesAtivos: activeAttendees.toString()
     });
     
     console.log('Atendentes chart created successfully');
