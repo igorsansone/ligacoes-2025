@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Reports Fix</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid p-4">
+        <h2>Test: Reports Page Fixes</h2>
+        
+        <!-- KPI Cards Dashboard -->
+        <div class="row g-4 mb-4" id="kpiCards">
+          <div class="col-md-3">
+            <div class="card bg-gradient-primary text-white border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                  <i class="fas fa-phone fa-2x opacity-75"></i>
+                </div>
+                <h2 class="fw-bold mb-1" id="kpiTotalLigacoes">-</h2>
+                <p class="mb-0 opacity-90">Total de Ligações</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card bg-gradient-success text-white border-0" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+              <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                  <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                </div>
+                <h2 class="fw-bold mb-1" id="kpiMediaDiaria">-</h2>
+                <p class="mb-0 opacity-90">Média Diária</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card bg-gradient-warning text-white border-0" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+              <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                  <i class="fas fa-clock fa-2x opacity-75"></i>
+                </div>
+                <h2 class="fw-bold mb-1" id="kpiPicoHorario">-</h2>
+                <p class="mb-0 opacity-90">Pico Horário</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card bg-gradient-info text-white border-0" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+              <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                  <i class="fas fa-users fa-2x opacity-75"></i>
+                </div>
+                <h2 class="fw-bold mb-1" id="kpiAtendentesAtivos">-</h2>
+                <p class="mb-0 opacity-90">Atendentes Ativos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Test Chart Container -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                    <div class="card-body p-4">
+                        <h5 class="card-title">Test Chart with Fixed Sizing</h5>
+                        <div class="chart-container" style="position: relative; height: 350px; max-height: 400px; background-color: #f8f9fa; border: 2px dashed #dee2e6;">
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; color: #6c757d;">
+                                <div>
+                                    <i class="fas fa-chart-pie fa-3x mb-3"></i>
+                                    <br>Chart Container<br>
+                                    <small>350px height, 400px max-height</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                    <div class="card-body p-4">
+                        <h5 class="card-title">Smaller Chart Container</h5>
+                        <div class="chart-container" style="position: relative; height: 280px; max-height: 320px; background-color: #f8f9fa; border: 2px dashed #dee2e6;">
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; color: #6c757d;">
+                                <div>
+                                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                                    <br>Chart Container<br>
+                                    <small>280px height, 320px max-height</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary mt-3" onclick="testKPIUpdate()">Test KPI Update</button>
+    </div>
+
+    <script>
+        // Global KPI data store to persist values across function calls
+        window.kpiData = {
+          total: '0',
+          mediaDiaria: '0',
+          picoHorario: '--:--',
+          atendentesAtivos: '0'
+        };
+
+        // Function to update KPI cards
+        function updateKPICards(data) {
+          // Update global KPI data with provided values only
+          if (data.total !== undefined) window.kpiData.total = data.total.toLocaleString ? data.total.toLocaleString('pt-BR') : data.total.toString();
+          if (data.mediaDiaria !== undefined) window.kpiData.mediaDiaria = data.mediaDiaria;
+          if (data.picoHorario !== undefined) window.kpiData.picoHorario = data.picoHorario;
+          if (data.atendentesAtivos !== undefined) window.kpiData.atendentesAtivos = data.atendentesAtivos;
+
+          // Get elements and update with current values
+          const kpiElements = {
+            total: document.getElementById('kpiTotalLigacoes'),
+            media: document.getElementById('kpiMediaDiaria'),
+            pico: document.getElementById('kpiPicoHorario'),
+            atendentes: document.getElementById('kpiAtendentesAtivos')
+          };
+
+          // Update display with current data
+          if (kpiElements.total) kpiElements.total.textContent = window.kpiData.total;
+          if (kpiElements.media) kpiElements.media.textContent = window.kpiData.mediaDiaria;
+          if (kpiElements.pico) kpiElements.pico.textContent = window.kpiData.picoHorario;
+          if (kpiElements.atendentes) kpiElements.atendentes.textContent = window.kpiData.atendentesAtivos;
+        }
+
+        function testKPIUpdate() {
+            // Simulate the expected values from our API data
+            console.log('Testing KPI updates...');
+            
+            // Test step by step updates as they would happen in the real app
+            updateKPICards({ total: 5 });
+            console.log('Step 1: Total updated to 5');
+            
+            setTimeout(() => {
+                updateKPICards({ mediaDiaria: '5' });
+                console.log('Step 2: Média diária updated to 5');
+            }, 500);
+            
+            setTimeout(() => {
+                updateKPICards({ picoHorario: '19:00 (5)' });
+                console.log('Step 3: Pico horário updated to 19:00 (5)');
+            }, 1000);
+            
+            setTimeout(() => {
+                updateKPICards({ atendentesAtivos: '3' });
+                console.log('Step 4: Atendentes ativos updated to 3');
+                console.log('Final KPI state:', window.kpiData);
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

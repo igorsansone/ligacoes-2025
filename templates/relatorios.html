@@ -608,9 +608,6 @@ async function loadDuvida() {
       }
     });
 
-    // Update KPI cards
-    updateKPICards({ total: total });
-    
     console.log('Duvida chart created successfully');
   } catch (error) {
     console.error('Exception in loadDuvida:', error);
@@ -762,11 +759,6 @@ async function loadDia() {
           }
         }
       }
-    });
-
-    // Update KPI cards with daily data
-    updateKPICards({ 
-      mediaDiaria: Math.round(media).toLocaleString('pt-BR')
     });
     
     console.log('Dia chart created successfully');
@@ -999,11 +991,6 @@ async function loadHorarios() {
         }
       }
     });
-
-    // Update KPI with peak hour info
-    updateKPICards({ 
-      picoHorario: maxHour
-    });
     
     console.log('Horarios chart created successfully');
   } catch (error) {
@@ -1122,11 +1109,6 @@ async function loadAtendentes() {
           }
         }
       }
-    });
-
-    // Update KPI with active attendees count
-    updateKPICards({ 
-      atendentesAtivos: activeAttendees.toString()
     });
     
     console.log('Atendentes chart created successfully');
