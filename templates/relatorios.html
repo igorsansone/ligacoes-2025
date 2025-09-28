@@ -1162,8 +1162,36 @@ document.getElementById('btnDiaDownload').addEventListener('click', () => {
   a.href = url; a.download = 'por_dia.png'; a.click();
 });
 
-/* Carrega inicial */
-loadDuvida(); loadDia(); loadComparativo(); loadHorarios(); loadAtendentes();
+/* Carrega inicial - Only if Chart.js is available */
+document.addEventListener('DOMContentLoaded', function() {
+  // Wait for Chart.js to be available
+  let checkAttempts = 0;
+  const maxAttempts = 10;
+  
+  function checkAndInitialize() {
+    checkAttempts++;
+    if (typeof Chart !== 'undefined') {
+      console.log('Chart.js is available, initializing charts...');
+      loadDuvida(); 
+      loadDia(); 
+      loadComparativo(); 
+      loadHorarios(); 
+      loadAtendentes();
+    } else if (checkAttempts < maxAttempts) {
+      setTimeout(checkAndInitialize, 500);
+    } else {
+      console.warn('Chart.js not available after waiting, charts will show as tables');
+      // Initialize with fallback tables
+      loadDuvida(); 
+      loadDia(); 
+      loadComparativo(); 
+      loadHorarios(); 
+      loadAtendentes();
+    }
+  }
+  
+  checkAndInitialize();
+});
 
 // Event listeners para novos controles
 document.getElementById('selPeriodo').addEventListener('change', () => {
