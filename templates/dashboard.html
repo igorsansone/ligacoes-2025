@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header com informações do usuário -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+          <p class="mb-0 text-muted">Bem-vindo(a), {{ user.nome_completo }}</p>
+        </div>
+        <div class="text-end">
+          <small class="text-muted">
+            <i class="fas fa-clock me-1"></i>
+            Último login: {{ format_sp(user.ultimo_login) if user.ultimo_login else 'Primeiro acesso' }}
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards de estatísticas -->
+  <div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                Total de Processos
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_processos }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-gavel fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-success shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                Processos Ativos
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">{{ processos_ativos }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                Tarefas Pendentes
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">{{ tarefas_pendentes|length }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-tasks fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-warning shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                Prazos Próximos
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">{{ proximos_prazos|length }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-calendar-times fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conteúdo principal -->
+  <div class="row">
+    <!-- Tarefas Pendentes -->
+    <div class="col-lg-6 mb-4">
+      <div class="card shadow">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+          <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-tasks me-2"></i>Minhas Tarefas Pendentes
+          </h6>
+          <a href="/tarefas" class="btn btn-sm btn-primary">Ver Todas</a>
+        </div>
+        <div class="card-body">
+          {% if tarefas_pendentes %}
+            {% for tarefa in tarefas_pendentes %}
+            <div class="d-flex align-items-center border-bottom py-2">
+              <div class="flex-grow-1">
+                <div class="fw-medium">{{ tarefa.titulo }}</div>
+                <small class="text-muted">
+                  {% if tarefa.processo %}
+                    Processo: {{ tarefa.processo.numero_processo }}
+                  {% endif %}
+                  {% if tarefa.data_limite %}
+                    | Prazo: {{ format_sp(tarefa.data_limite) }}
+                  {% endif %}
+                </small>
+              </div>
+              <div class="text-end">
+                {% if tarefa.prioridade.value == 'urgente' %}
+                  <span class="badge bg-danger">Urgente</span>
+                {% elif tarefa.prioridade.value == 'alta' %}
+                  <span class="badge bg-warning">Alta</span>
+                {% elif tarefa.prioridade.value == 'media' %}
+                  <span class="badge bg-info">Média</span>
+                {% else %}
+                  <span class="badge bg-secondary">Baixa</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+              <p class="text-muted">Nenhuma tarefa pendente!</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Próximos Prazos -->
+    <div class="col-lg-6 mb-4">
+      <div class="card shadow">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+          <h6 class="m-0 font-weight-bold text-warning">
+            <i class="fas fa-calendar-times me-2"></i>Prazos Próximos (7 dias)
+          </h6>
+          <a href="/prazos" class="btn btn-sm btn-warning">Ver Todos</a>
+        </div>
+        <div class="card-body">
+          {% if proximos_prazos %}
+            {% for prazo in proximos_prazos %}
+            <div class="d-flex align-items-center border-bottom py-2">
+              <div class="flex-grow-1">
+                <div class="fw-medium">{{ prazo.titulo }}</div>
+                <small class="text-muted">
+                  Processo: {{ prazo.processo.numero_processo }}
+                  | Data: {{ format_sp(prazo.data_limite) }}
+                </small>
+              </div>
+              <div class="text-end">
+                {% set prazo_date = prazo.data_limite %}
+                {% set hoje = now().date() %}
+                {% set dias_restantes = (prazo_date.date() - hoje).days %}
+                {% if dias_restantes <= 1 %}
+                  <span class="badge bg-danger">Hoje/Amanhã</span>
+                {% elif dias_restantes <= 3 %}
+                  <span class="badge bg-warning">{{ dias_restantes }} dias</span>
+                {% else %}
+                  <span class="badge bg-info">{{ dias_restantes }} dias</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-calendar-check fa-3x text-success mb-3"></i>
+              <p class="text-muted">Nenhum prazo próximo!</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Próximos Compromissos -->
+    <div class="col-lg-6 mb-4">
+      <div class="card shadow">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+          <h6 class="m-0 font-weight-bold text-info">
+            <i class="fas fa-calendar me-2"></i>Próximos Compromissos
+          </h6>
+          <a href="/agenda" class="btn btn-sm btn-info">Ver Agenda</a>
+        </div>
+        <div class="card-body">
+          {% if proximos_compromissos %}
+            {% for compromisso in proximos_compromissos %}
+            <div class="d-flex align-items-center border-bottom py-2">
+              <div class="flex-grow-1">
+                <div class="fw-medium">{{ compromisso.titulo }}</div>
+                <small class="text-muted">
+                  {% if compromisso.local %}{{ compromisso.local }} | {% endif %}
+                  {{ format_sp(compromisso.data_inicio) }}
+                  {% if compromisso.processo %}
+                    | Processo: {{ compromisso.processo.numero_processo }}
+                  {% endif %}
+                </small>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-calendar-plus fa-3x text-info mb-3"></i>
+              <p class="text-muted">Nenhum compromisso agendado!</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Notificações -->
+    <div class="col-lg-6 mb-4">
+      <div class="card shadow">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+          <h6 class="m-0 font-weight-bold text-secondary">
+            <i class="fas fa-bell me-2"></i>Notificações
+            {% if notificacoes|length > 0 %}
+              <span class="badge bg-danger">{{ notificacoes|length }}</span>
+            {% endif %}
+          </h6>
+          <a href="/notificacoes" class="btn btn-sm btn-secondary">Ver Todas</a>
+        </div>
+        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+          {% if notificacoes %}
+            {% for notificacao in notificacoes %}
+            <div class="d-flex align-items-start border-bottom py-2">
+              <div class="me-2 mt-1">
+                {% if notificacao.tipo.value == 'prazo' %}
+                  <i class="fas fa-clock text-warning"></i>
+                {% elif notificacao.tipo.value == 'tarefa' %}
+                  <i class="fas fa-tasks text-info"></i>
+                {% elif notificacao.tipo.value == 'processo' %}
+                  <i class="fas fa-gavel text-primary"></i>
+                {% elif notificacao.tipo.value == 'chat' %}
+                  <i class="fas fa-comments text-success"></i>
+                {% else %}
+                  <i class="fas fa-info-circle text-secondary"></i>
+                {% endif %}
+              </div>
+              <div class="flex-grow-1">
+                <div class="fw-medium">{{ notificacao.titulo }}</div>
+                <small class="text-muted">{{ notificacao.conteudo[:80] }}{% if notificacao.conteudo|length > 80 %}...{% endif %}</small>
+                <br>
+                <small class="text-muted">{{ format_sp(notificacao.created_at) }}</small>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+              <p class="text-muted">Nenhuma notificação!</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Links rápidos -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-bolt me-2"></i>Ações Rápidas
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <a href="/processos/novo" class="btn btn-primary btn-block">
+                <i class="fas fa-plus me-2"></i>Novo Processo
+              </a>
+            </div>
+            <div class="col-md-3 mb-3">
+              <a href="/tarefas/nova" class="btn btn-info btn-block">
+                <i class="fas fa-tasks me-2"></i>Nova Tarefa
+              </a>
+            </div>
+            <div class="col-md-3 mb-3">
+              <a href="/agenda/novo" class="btn btn-success btn-block">
+                <i class="fas fa-calendar-plus me-2"></i>Novo Compromisso
+              </a>
+            </div>
+            <div class="col-md-3 mb-3">
+              <a href="/chat" class="btn btn-warning btn-block">
+                <i class="fas fa-comments me-2"></i>Chat da Equipe
+              </a>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <a href="/processos" class="btn btn-outline-primary btn-block">
+                <i class="fas fa-search me-2"></i>Buscar Processos
+              </a>
+            </div>
+            {% if can_access_reports %}
+            <div class="col-md-3 mb-3">
+              <a href="/relatorios-processos" class="btn btn-outline-info btn-block">
+                <i class="fas fa-chart-bar me-2"></i>Relatórios
+              </a>
+            </div>
+            {% endif %}
+            <div class="col-md-3 mb-3">
+              <a href="/ligacoes" class="btn btn-outline-secondary btn-block">
+                <i class="fas fa-phone me-2"></i>Sistema Antigo (Ligações)
+              </a>
+            </div>
+            {% if user.tipo_usuario.value == 'admin' %}
+            <div class="col-md-3 mb-3">
+              <a href="/admin" class="btn btn-outline-danger btn-block">
+                <i class="fas fa-cog me-2"></i>Administração
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estatísticas gerais -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-chart-pie me-2"></i>Visão Geral do Sistema
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-2">
+              <div class="border-end">
+                <div class="h4 font-weight-bold text-primary">{{ total_processos }}</div>
+                <div class="small text-muted">Total Processos</div>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="border-end">
+                <div class="h4 font-weight-bold text-success">{{ processos_ativos }}</div>
+                <div class="small text-muted">Ativos</div>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="border-end">
+                <div class="h4 font-weight-bold text-info">{{ tarefas_pendentes|length }}</div>
+                <div class="small text-muted">Tarefas Pendentes</div>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="border-end">
+                <div class="h4 font-weight-bold text-warning">{{ proximos_prazos|length }}</div>
+                <div class="small text-muted">Prazos Próximos</div>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="border-end">
+                <div class="h4 font-weight-bold text-secondary">{{ proximos_compromissos|length }}</div>
+                <div class="small text-muted">Compromissos</div>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="h4 font-weight-bold text-danger">{{ notificacoes|length }}</div>
+              <div class="small text-muted">Notificações</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estilos adicionais para dashboard -->
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.btn-block {
+    width: 100%;
+}
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+</style>
+
+<!-- JavaScript para atualização automática -->
+<script>
+// Atualizar notificações a cada 30 segundos
+setInterval(function() {
+    fetch('/api/notificacoes/count')
+        .then(response => response.json())
+        .then(data => {
+            if (data.count > 0) {
+                document.title = `(${data.count}) Sistema de Processos - CRO/RS`;
+            } else {
+                document.title = 'Sistema de Processos - CRO/RS';
+            }
+        })
+        .catch(error => console.log('Erro ao verificar notificações:', error));
+}, 30000);
+
+// Marcar notificações como lidas quando clicadas
+document.querySelectorAll('[href="/notificacoes"]').forEach(link => {
+    link.addEventListener('click', function() {
+        fetch('/api/notificacoes/marcar-todas-lidas', {method: 'POST'})
+            .then(() => {
+                // Atualizar contador
+                document.querySelectorAll('.badge.bg-danger').forEach(badge => {
+                    badge.style.display = 'none';
+                });
+            });
+    });
+});
+</script>
+{% endblock %}

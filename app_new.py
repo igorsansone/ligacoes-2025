@@ -482,124 +482,16 @@ def dashboard(request: Request, current_session: dict = Depends(require_auth)):
             "notificacoes": notificacoes,
             "format_sp": format_sp,
             "can_edit_delete": can_edit_delete(user),
-            "can_access_reports": can_access_reports(user),
-            "now": lambda: datetime.now(timezone.utc)  # Função para templates
+            "can_access_reports": can_access_reports(user)
         })
     finally:
         db.close()
 
 # === IMPORTAR ROTAS DOS MÓDULOS ===
-# Importar rotas antigas para compatibilidade
+# Aqui vamos importar as rotas específicas de cada módulo
 
-# API endpoints para notificações
-@app.get("/api/notificacoes/recentes")
-def get_notificacoes_recentes(current_session: dict = Depends(require_auth)):
-    """API para buscar notificações recentes"""
-    db = SessionLocal()
-    try:
-        user = db.query(Usuario).filter(Usuario.id == current_session['user_id']).first()
-        
-        # Buscar notificações não lidas
-        notificacoes = db.query(Notificacao).filter(
-            and_(
-                Notificacao.usuario_id == user.id,
-                Notificacao.lida == False
-            )
-        ).order_by(desc(Notificacao.created_at)).limit(5).all()
-        
-        notifications_data = []
-        for n in notificacoes:
-            # Calcular tempo relativo simples
-            delta = datetime.now(timezone.utc) - n.created_at
-            if delta.days > 0:
-                tempo_relativo = f"{delta.days} dia(s) atrás"
-            elif delta.seconds > 3600:
-                tempo_relativo = f"{delta.seconds // 3600} hora(s) atrás"
-            elif delta.seconds > 60:
-                tempo_relativo = f"{delta.seconds // 60} minuto(s) atrás"
-            else:
-                tempo_relativo = "Agora"
-                
-            notifications_data.append({
-                'id': n.id,
-                'titulo': n.titulo,
-                'conteudo': n.conteudo,
-                'tipo': n.tipo.value,
-                'link_interno': n.link_interno,
-                'tempo_relativo': tempo_relativo
-            })
-        
-        return {
-            'count': len(notificacoes),
-            'notifications': notifications_data
-        }
-    finally:
-        db.close()
-
-@app.get("/api/notificacoes/count")
-def get_notificacoes_count(current_session: dict = Depends(require_auth)):
-    """API para contar notificações não lidas"""
-    db = SessionLocal()
-    try:
-        user = db.query(Usuario).filter(Usuario.id == current_session['user_id']).first()
-        count = db.query(Notificacao).filter(
-            and_(
-                Notificacao.usuario_id == user.id,
-                Notificacao.lida == False
-            )
-        ).count()
-        
-        return {'count': count}
-    finally:
-        db.close()
-
-@app.post("/api/notificacoes/marcar-vistas")
-def marcar_notificacoes_vistas(current_session: dict = Depends(require_auth)):
-    """Marcar notificações como vistas (mas não lidas)"""
-    # Por enquanto apenas retorna sucesso
-    return {'status': 'ok'}
-
-@app.post("/api/notificacoes/marcar-todas-lidas")
-def marcar_todas_notificacoes_lidas(current_session: dict = Depends(require_auth)):
-    """Marcar todas as notificações como lidas"""
-    db = SessionLocal()
-    try:
-        user = db.query(Usuario).filter(Usuario.id == current_session['user_id']).first()
-        db.query(Notificacao).filter(
-            and_(
-                Notificacao.usuario_id == user.id,
-                Notificacao.lida == False
-            )
-        ).update({'lida': True, 'data_leitura': datetime.now(timezone.utc)})
-        db.commit()
-        return {'status': 'ok'}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        db.close()
-
-# Importar rotas de processos
-try:
-    with open('process_routes.py', 'r') as f:
-        process_routes_code = f.read()
-    exec(process_routes_code)
-except Exception as e:
-    print(f"Warning: Could not load process routes: {e}")
-
-# Importar todas as rotas antigas que estão no arquivo app_old_routes
-try:
-    with open('app_old_routes.py', 'r') as f:
-        routes_code = f.read()
-    exec(routes_code)
-except Exception as e:
-    print(f"Warning: Could not load old routes: {e}")
-    
-    # Fallback: create a simple compatibility route
-    @app.get("/ligacoes")
-    def ligacoes_fallback(request: Request, current_session: dict = Depends(require_auth)):
-        """Fallback route for ligacoes"""
-        return RedirectResponse("/", status_code=302)
+# Para agora, vamos manter as rotas antigas para compatibilidade
+from app_old_routes import *
 
 if __name__ == "__main__":
     import uvicorn
