@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-0 text-gray-800">Processos</h1>
+          <p class="mb-0 text-muted">Gerenciamento de processos jurídicos</p>
+        </div>
+        <div>
+          {% if can_edit_delete %}
+          <a href="/processos/novo" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Novo Processo
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <form method="GET" class="row g-3">
+            <div class="col-md-8">
+              <label for="search" class="form-label">Buscar</label>
+              <input type="text" class="form-control" id="search" name="search" 
+                     value="{{ search }}" placeholder="Número, título, autor ou réu...">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <button type="submit" class="btn btn-outline-primary me-2">
+                <i class="fas fa-search me-1"></i>Buscar
+              </button>
+              <a href="/processos" class="btn btn-outline-secondary">
+                <i class="fas fa-times me-1"></i>Limpar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de processos -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-gavel me-2"></i>Processos Encontrados ({{ total }})
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          {% if processos %}
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Número</th>
+                    <th>Título</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Prioridade</th>
+                    <th>Responsável</th>
+                    <th>Data Abertura</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for processo in processos %}
+                  <tr>
+                    <td>
+                      <a href="/processos/{{ processo.id }}" class="text-decoration-none">
+                        <strong>{{ processo.numero_processo }}</strong>
+                      </a>
+                    </td>
+                    <td>
+                      <div class="fw-medium">{{ processo.titulo[:50] }}{% if processo.titulo|length > 50 %}...{% endif %}</div>
+                      <small class="text-muted">{{ processo.autor }} vs {{ processo.reu }}</small>
+                    </td>
+                    <td>
+                      <span class="badge bg-info">{{ processo.tipo_processo.value.title() }}</span>
+                      <br><small class="text-muted">{{ processo.area }}</small>
+                    </td>
+                    <td>
+                      {% if processo.status.value == 'ativo' %}
+                        <span class="badge bg-success">Ativo</span>
+                      {% elif processo.status.value == 'arquivado' %}
+                        <span class="badge bg-secondary">Arquivado</span>
+                      {% elif processo.status.value == 'suspenso' %}
+                        <span class="badge bg-warning">Suspenso</span>
+                      {% elif processo.status.value == 'encerrado' %}
+                        <span class="badge bg-dark">Encerrado</span>
+                      {% else %}
+                        <span class="badge bg-light text-dark">{{ processo.status.value.title() }}</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if processo.prioridade.value == 'urgente' %}
+                        <span class="badge bg-danger">Urgente</span>
+                      {% elif processo.prioridade.value == 'alta' %}
+                        <span class="badge bg-warning">Alta</span>
+                      {% elif processo.prioridade.value == 'media' %}
+                        <span class="badge bg-info">Média</span>
+                      {% else %}
+                        <span class="badge bg-secondary">Baixa</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="small">
+                        <div><strong>Resp:</strong> {{ processo.responsavel.nome_completo if processo.responsavel else 'N/A' }}</div>
+                        {% if processo.advogado and processo.advogado.id != processo.responsavel.id %}
+                        <div><strong>Adv:</strong> {{ processo.advogado.nome_completo }}</div>
+                        {% endif %}
+                      </div>
+                    </td>
+                    <td>{{ format_sp(processo.data_abertura) }}</td>
+                    <td>
+                      <div class="btn-group" role="group">
+                        <a href="/processos/{{ processo.id }}" class="btn btn-sm btn-outline-primary" title="Visualizar">
+                          <i class="fas fa-eye"></i>
+                        </a>
+                        {% if can_edit_delete %}
+                        <a href="/processos/{{ processo.id }}/editar" class="btn btn-sm btn-outline-warning" title="Editar">
+                          <i class="fas fa-edit"></i>
+                        </a>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Paginação -->
+            <div class="card-footer">
+              <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                  Mostrando {{ processos|length }} de {{ total }} processos
+                </small>
+                <nav>
+                  <ul class="pagination pagination-sm mb-0">
+                    {% if has_prev %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}">
+                        <i class="fas fa-chevron-left"></i>
+                      </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                      <span class="page-link">{{ page }}</span>
+                    </li>
+                    
+                    {% if has_next %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}">
+                        <i class="fas fa-chevron-right"></i>
+                      </a>
+                    </li>
+                    {% endif %}
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-search fa-3x text-muted mb-3"></i>
+              <h5 class="text-muted">Nenhum processo encontrado</h5>
+              {% if search %}
+                <p class="text-muted">Tente ajustar os filtros de busca</p>
+                <a href="/processos" class="btn btn-outline-primary">Ver Todos</a>
+              {% else %}
+                <p class="text-muted">Comece criando seu primeiro processo</p>
+                {% if can_edit_delete %}
+                <a href="/processos/novo" class="btn btn-primary">
+                  <i class="fas fa-plus me-2"></i>Novo Processo
+                </a>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estilos adicionais -->
+<style>
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+.table th {
+    border-top: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #5a5c69;
+}
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}

@@ -153,25 +153,140 @@
   <body class="bg-light">
     <!-- Navbar (oculta na impressão) -->
     <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top no-print">
-      <div class="container">
+      <div class="container-fluid">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/">
           <img src="/static/logo-crors.png" alt="CRO/RS" class="brand-logo" onerror="this.style.display='none'">
-          <span>ELEIÇÕES CRORS - 2025</span>
+          <span>Sistema de Processos - CRO/RS</span>
         </a>
-        <div class="d-flex gap-2 align-items-center">
-          <a class="btn btn-outline-primary" href="/">Cadastro</a>
-          <a class="btn btn-outline-primary" href="/pesquisa-profissional">Pesquisa Profissional</a>
-          {% if can_access_reports %}
-          <a class="btn btn-primary" href="/relatorios">Relatórios</a>
-          {% endif %}
-          {% if current_user_fullname %}
-          <span class="text-muted fw-medium d-none d-md-inline">{{ current_user_fullname }}</span>
-          {% endif %}
-          <form method="post" action="/logout" class="d-inline">
-            <button type="submit" class="btn btn-outline-danger">
-              <i class="fas fa-sign-out-alt me-1"></i>Sair
-            </button>
-          </form>
+        
+        <!-- Botão toggle para mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+            </li>
+            
+            <!-- Dropdown Processos -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-gavel me-1"></i>Processos
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/processos"><i class="fas fa-list me-2"></i>Listar Processos</a></li>
+                <li><a class="dropdown-item" href="/processos/novo"><i class="fas fa-plus me-2"></i>Novo Processo</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/processos/busca"><i class="fas fa-search me-2"></i>Busca Avançada</a></li>
+              </ul>
+            </li>
+            
+            <!-- Dropdown Tarefas -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-tasks me-1"></i>Tarefas
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/tarefas"><i class="fas fa-list me-2"></i>Minhas Tarefas</a></li>
+                <li><a class="dropdown-item" href="/tarefas/nova"><i class="fas fa-plus me-2"></i>Nova Tarefa</a></li>
+                <li><a class="dropdown-item" href="/tarefas/equipe"><i class="fas fa-users me-2"></i>Tarefas da Equipe</a></li>
+              </ul>
+            </li>
+            
+            <!-- Dropdown Agenda -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-calendar me-1"></i>Agenda
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/agenda"><i class="fas fa-calendar-alt me-2"></i>Minha Agenda</a></li>
+                <li><a class="dropdown-item" href="/agenda/novo"><i class="fas fa-plus me-2"></i>Novo Compromisso</a></li>
+                <li><a class="dropdown-item" href="/prazos"><i class="fas fa-clock me-2"></i>Prazos</a></li>
+              </ul>
+            </li>
+            
+            <!-- Chat -->
+            <li class="nav-item">
+              <a class="nav-link" href="/chat"><i class="fas fa-comments me-1"></i>Chat</a>
+            </li>
+            
+            <!-- Dropdown Relatórios (se tiver permissão) -->
+            {% if can_access_reports %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-chart-bar me-1"></i>Relatórios
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/relatorios-processos"><i class="fas fa-chart-pie me-2"></i>Relatórios de Processos</a></li>
+                <li><a class="dropdown-item" href="/relatorios-produtividade"><i class="fas fa-chart-line me-2"></i>Produtividade</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/relatorios"><i class="fas fa-phone me-2"></i>Relatórios Antigos (Ligações)</a></li>
+              </ul>
+            </li>
+            {% endif %}
+            
+            <!-- Dropdown Sistema Antigo -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle text-muted" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-history me-1"></i>Sistema Antigo
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/ligacoes"><i class="fas fa-phone me-2"></i>Ligações</a></li>
+                <li><a class="dropdown-item" href="/pesquisa-profissional"><i class="fas fa-search me-2"></i>Pesquisa Profissional</a></li>
+              </ul>
+            </li>
+          </ul>
+          
+          <!-- Lado direito da navbar -->
+          <div class="d-flex gap-2 align-items-center">
+            <!-- Notificações -->
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary position-relative" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-bell"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notification-count" style="display: none;">
+                  0
+                </span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                <li><h6 class="dropdown-header">Notificações</h6></li>
+                <li><hr class="dropdown-divider"></li>
+                <div id="notifications-list">
+                  <li><span class="dropdown-item-text text-muted">Carregando...</span></li>
+                </div>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-center" href="/notificacoes">Ver todas</a></li>
+              </ul>
+            </div>
+            
+            <!-- Dropdown do usuário -->
+            <div class="dropdown">
+              <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-user me-1"></i>
+                <span class="d-none d-md-inline">{{ current_user_fullname or current_session.nome_completo }}</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">{{ current_user_fullname or current_session.nome_completo }}</h6></li>
+                <li><span class="dropdown-item-text text-muted small">{{ current_session.tipo_usuario.title() if current_session.tipo_usuario else 'Usuário' }}</span></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/perfil"><i class="fas fa-user-edit me-2"></i>Meu Perfil</a></li>
+                <li><a class="dropdown-item" href="/configuracoes"><i class="fas fa-cog me-2"></i>Configurações</a></li>
+                {% if current_session.tipo_usuario == 'admin' %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/admin"><i class="fas fa-tools me-2"></i>Administração</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <form method="post" action="/logout" class="d-inline w-100">
+                    <button type="submit" class="dropdown-item text-danger">
+                      <i class="fas fa-sign-out-alt me-2"></i>Sair
+                    </button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </nav>
@@ -186,5 +301,65 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Script para notificações -->
+    <script>
+    // Função para carregar notificações
+    function loadNotifications() {
+        fetch('/api/notificacoes/recentes')
+            .then(response => response.json())
+            .then(data => {
+                const count = data.count || 0;
+                const notifications = data.notifications || [];
+                
+                // Atualizar contador
+                const countBadge = document.getElementById('notification-count');
+                if (count > 0) {
+                    countBadge.textContent = count;
+                    countBadge.style.display = 'block';
+                } else {
+                    countBadge.style.display = 'none';
+                }
+                
+                // Atualizar lista
+                const notificationsList = document.getElementById('notifications-list');
+                if (notifications.length > 0) {
+                    notificationsList.innerHTML = notifications.map(n => `
+                        <li>
+                            <a class="dropdown-item small" href="${n.link_interno || '#'}">
+                                <div class="fw-medium">${n.titulo}</div>
+                                <div class="text-muted">${n.conteudo.substring(0, 50)}${n.conteudo.length > 50 ? '...' : ''}</div>
+                                <small class="text-muted">${n.tempo_relativo}</small>
+                            </a>
+                        </li>
+                    `).join('');
+                } else {
+                    notificationsList.innerHTML = '<li><span class="dropdown-item-text text-muted">Nenhuma notificação</span></li>';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar notificações:', error);
+            });
+    }
+    
+    // Carregar notificações no início
+    document.addEventListener('DOMContentLoaded', function() {
+        loadNotifications();
+        
+        // Atualizar a cada 30 segundos
+        setInterval(loadNotifications, 30000);
+    });
+    
+    // Marcar notificações como lidas quando abrir o dropdown
+    document.querySelector('[data-bs-toggle="dropdown"]').addEventListener('click', function() {
+        setTimeout(() => {
+            fetch('/api/notificacoes/marcar-vistas', {method: 'POST'})
+                .then(() => {
+                    // Aguardar um pouco e recarregar
+                    setTimeout(loadNotifications, 1000);
+                });
+        }, 500);
+    });
+    </script>
   </body>
 </html>
