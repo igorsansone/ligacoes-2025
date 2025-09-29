@@ -1296,19 +1296,26 @@ def pesquisar_profissional(
     
     db = SessionLocal()
     try:
-        # Pesquisar por nome (LIKE), número CRO (exato) ou qualquer campo adicional
-        results = db.query(ProfissionalApto).filter(
-            (ProfissionalApto.nome.ilike(f"%{query}%")) |
-            (ProfissionalApto.numero_cro == query) |
-            (ProfissionalApto.categoria.ilike(f"%{query}%")) |
-            (ProfissionalApto.cpf.ilike(f"%{query}%")) |
-            (ProfissionalApto.email.ilike(f"%{query}%")) |
-            (ProfissionalApto.outros_emails.ilike(f"%{query}%")) |
-            (ProfissionalApto.celular_atualizado.ilike(f"%{query}%")) |
-            (ProfissionalApto.outros_telefones.ilike(f"%{query}%")) |
-            (ProfissionalApto.situacao.ilike(f"%{query}%")) |
-            (ProfissionalApto.outras_informacoes.ilike(f"%{query}%"))
-        ).limit(50).all()  # Limitar a 50 resultados
+        # Verificar se a query é composta apenas por dígitos (busca por CRO)
+        if query.isdigit():
+            # Para números (CRO), fazer apenas busca exata no campo numero_cro
+            results = db.query(ProfissionalApto).filter(
+                ProfissionalApto.numero_cro == query
+            ).limit(50).all()  # Limitar a 50 resultados
+        else:
+            # Para texto com letras ou outros caracteres, buscar parcialmente em todos os campos
+            results = db.query(ProfissionalApto).filter(
+                (ProfissionalApto.nome.ilike(f"%{query}%")) |
+                (ProfissionalApto.numero_cro == query) |
+                (ProfissionalApto.categoria.ilike(f"%{query}%")) |
+                (ProfissionalApto.cpf.ilike(f"%{query}%")) |
+                (ProfissionalApto.email.ilike(f"%{query}%")) |
+                (ProfissionalApto.outros_emails.ilike(f"%{query}%")) |
+                (ProfissionalApto.celular_atualizado.ilike(f"%{query}%")) |
+                (ProfissionalApto.outros_telefones.ilike(f"%{query}%")) |
+                (ProfissionalApto.situacao.ilike(f"%{query}%")) |
+                (ProfissionalApto.outras_informacoes.ilike(f"%{query}%"))
+            ).limit(50).all()  # Limitar a 50 resultados
         
         # Converter para dicionário para JSON
         profissionais = []
