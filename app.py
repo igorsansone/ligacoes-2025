@@ -1162,6 +1162,28 @@ async def upload_csv_profissionais(
                     return df_columns[available_columns.index(col_name)]
             return None
         
+        # Função auxiliar para processar numero_cro e remover decimais desnecessários
+        def process_numero_cro(value):
+            """Processa o campo numero_cro para garantir que floats como 9659.0 sejam convertidos para '9659'"""
+            if pd.notna(value):
+                # Convert to string first
+                str_value = str(value).strip()
+                # If it's a float-like string ending in .0, remove the decimal part
+                if str_value.endswith('.0'):
+                    return str_value[:-2]
+                else:
+                    # Try to convert to float and back to int to handle actual floats
+                    try:
+                        float_val = float(str_value)
+                        if float_val.is_integer():
+                            return str(int(float_val))
+                        else:
+                            return str_value  # Keep as is if not integer
+                    except ValueError:
+                        return str_value  # Keep as is if not numeric
+            else:
+                return ""
+        
         # Encontrar colunas usando a função auxiliar
         name_col = find_column(name_cols, available_cols, df.columns)
         cro_col = find_column(cro_cols, available_cols, df.columns)
@@ -1188,7 +1210,7 @@ async def upload_csv_profissionais(
             for _, row in df.iterrows():
                 # Extrair dados das colunas identificadas
                 nome = str(row[name_col]).strip() if pd.notna(row[name_col]) else ""
-                numero_cro = str(row[cro_col]).strip() if pd.notna(row[cro_col]) else ""
+                numero_cro = process_numero_cro(row[cro_col])
                 situacao = str(row[situacao_col]).strip() if situacao_col and pd.notna(row[situacao_col]) else ""
                 categoria = str(row[categoria_col]).strip() if categoria_col and pd.notna(row[categoria_col]) else ""
                 cpf = str(row[cpf_col]).strip() if cpf_col and pd.notna(row[cpf_col]) else ""
