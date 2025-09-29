@@ -162,6 +162,7 @@ def generate_users():
     """Gera dicionário de usuários a partir da lista de colaboradores"""
     colaboradores = [
         ("André Nunes Flores", "13/05/1983"),
+        ("Amilcar Ramos", "23/04/1983"),
         ("Alex Barcelos", "07/11/1975"),
         ("Ana Porto", "10/04/1975"),
         ("Ana Lopes", "01/02/1985"),
