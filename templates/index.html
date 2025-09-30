@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
-<!-- CRO Logo Section -->
-<div class="row mb-4">
-  <div class="col-12 text-center">
-    <div class="py-4 bg-white rounded shadow-sm border">
-      <img src="/static/logo-crors.png" alt="Conselho Regional de Odontologia do Rio Grande do Sul" class="img-fluid" style="max-height: 120px; object-fit: contain;" onerror="this.innerHTML='<div class=\'text-primary fw-bold fs-4\'>CRO/RS - ELEIÇÕES 2025</div>'">
-      <div class="mt-2">
-        <h2 class="h4 mb-1 text-primary fw-bold">ELEIÇÕES CRORS - 2025</h2>
-        <p class="text-muted mb-0 small">Sistema de Registro de Ligações</p>
+<!-- CRO Logo Section - Enhanced -->
+<div class="row mb-5">
+  <div class="col-12">
+    <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,251,0.95) 100%); border-radius: 20px; overflow: hidden;">
+      <div class="card-body text-center py-5">
+        <div class="mb-3">
+          <img src="/static/logo-crors.png" alt="Conselho Regional de Odontologia do Rio Grande do Sul" class="img-fluid" style="max-height: 100px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));" onerror="this.innerHTML='<div class=\'text-primary fw-bold fs-4\'>CRO/RS</div>'">
+        </div>
+        <h1 class="display-6 fw-bold mb-2" style="background: linear-gradient(135deg, #4A90E2 0%, #9B59B6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          ELEIÇÕES CRORS - 2025
+        </h1>
+        <p class="text-muted mb-0 d-flex align-items-center justify-content-center gap-2">
+          <i class="fas fa-phone-alt text-primary"></i>
+          <span class="fw-medium">Sistema de Registro de Ligações</span>
+        </p>
       </div>
     </div>
   </div>
@@ -15,23 +22,37 @@
 
 <div class="row g-4">
   <div class="col-lg-5">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="card-title mb-0">Cadastrar nova ligação</h5>
-          <small class="text-muted">{{ current_user_fullname }}</small>
+    <div class="card shadow-lg h-100" style="border-radius: 20px;">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+            <i class="fas fa-phone-volume text-primary" style="font-size: 1.3rem;"></i>
+            <span>Cadastrar nova ligação</span>
+          </h5>
+          <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%); font-size: 0.8rem;">
+            <i class="fas fa-user me-1"></i>{{ current_user_fullname }}
+          </span>
         </div>
         <form method="post" action="/cadastrar" class="vstack gap-3">
           <div>
-            <label class="form-label fw-semibold">CRO</label>
+            <label class="form-label fw-semibold d-flex align-items-center gap-2">
+              <i class="fas fa-id-card text-primary"></i>
+              CRO
+            </label>
             <input type="text" name="cro" class="form-control" placeholder="Ex.: CRO/RS 12345" required>
           </div>
           <div>
-            <label class="form-label fw-semibold">Nome do Inscrito</label>
+            <label class="form-label fw-semibold d-flex align-items-center gap-2">
+              <i class="fas fa-user-circle text-success"></i>
+              Nome do Inscrito
+            </label>
             <input type="text" name="nome_inscrito" class="form-control" placeholder="Nome completo" required>
           </div>
           <div>
-            <label class="form-label fw-semibold">Dúvida</label>
+            <label class="form-label fw-semibold d-flex align-items-center gap-2">
+              <i class="fas fa-question-circle" style="color: #9B59B6;"></i>
+              Dúvida
+            </label>
             <select name="duvida" class="form-select" required>
               {% for opt in duvida_opcoes %}
               <option value="{{ opt }}">{{ opt }}</option>
@@ -39,29 +60,38 @@
             </select>
           </div>
           <div>
-            <label class="form-label fw-semibold">Observação</label>
+            <label class="form-label fw-semibold d-flex align-items-center gap-2">
+              <i class="fas fa-comment-dots text-secondary"></i>
+              Observação
+            </label>
             <textarea name="observacao" class="form-control" rows="3" placeholder="Opcional: detalhes adicionais"></textarea>
           </div>
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-success">
-              <i class="fas fa-plus me-1"></i>Cadastrar ligação
+          <div class="d-flex gap-3 flex-wrap">
+            <button type="submit" class="btn btn-success flex-grow-1" style="min-width: 200px;">
+              <i class="fas fa-plus-circle me-2"></i>Cadastrar ligação
             </button>
             {% if can_access_reports %}
-            <a class="btn btn-outline-secondary" href="/relatorios">
-              <i class="fas fa-chart-bar me-1"></i>Ver relatórios
+            <a class="btn btn-outline-secondary flex-grow-1" href="/relatorios" style="min-width: 160px;">
+              <i class="fas fa-chart-bar me-2"></i>Ver relatórios
             </a>
             {% endif %}
           </div>
-          <div class="form-text">A data e a hora são preenchidas automaticamente (fuso: Brasil/RS).</div>
+          <div class="alert alert-info mb-0 d-flex align-items-start gap-2" style="background: rgba(74, 144, 226, 0.1); border: 2px solid rgba(74, 144, 226, 0.2); border-radius: 12px;">
+            <i class="fas fa-info-circle mt-1" style="color: #4A90E2;"></i>
+            <small style="color: #2C3E50;">A data e a hora são preenchidas automaticamente (fuso: Brasil/RS).</small>
+          </div>
         </form>
       </div>
     </div>
   </div>
 
   <div class="col-lg-7">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title mb-3">Últimas ligações cadastradas</h5>
+    <div class="card shadow-lg h-100" style="border-radius: 20px;">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-4 d-flex align-items-center gap-2">
+          <i class="fas fa-history text-primary" style="font-size: 1.3rem;"></i>
+          <span>Últimas ligações cadastradas</span>
+        </h5>
         <div class="table-responsive">
           <table class="table table-sm table-striped align-middle">
             <thead>
@@ -81,27 +111,34 @@
             <tbody>
               {% for l in ligacoes %}
               <tr>
-                <td>{{ l.id }}</td>
-                <td>{{ l.cro }}</td>
+                <td><span class="badge bg-primary">{{ l.id }}</span></td>
+                <td class="fw-medium">{{ l.cro }}</td>
                 <td>{{ l.nome_inscrito }}</td>
-                <td>{{ l.duvida }}</td>
+                <td><small>{{ l.duvida }}</small></td>
                 <td style="max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ l.observacao or '' }}">
-                  {{ (l.observacao or '') }}
+                  <small>{{ (l.observacao or '') }}</small>
                 </td>
                 <td class="text-muted small">{{ l.atendente or '-' }}</td>
-                <td>{{ format_sp(l.created_at) }}</td>
+                <td class="text-nowrap"><small>{{ format_sp(l.created_at) }}</small></td>
                 {% if can_edit_delete %}
                 <td class="text-end">
-                  <a href="/editar/{{ l.id }}" class="btn btn-sm btn-outline-primary me-1">Editar</a>
+                  <a href="/editar/{{ l.id }}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                    <i class="fas fa-edit"></i>
+                  </a>
                   <form method="post" action="/excluir/{{ l.id }}" onsubmit="return confirm('Excluir a ligação #{{ l.id }}?');" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                      <i class="fas fa-trash"></i>
+                    </button>
                   </form>
                 </td>
                 {% endif %}
               </tr>
               {% else %}
               <tr>
-                <td colspan="{% if can_edit_delete %}8{% else %}7{% endif %}" class="text-muted">Nenhum registro ainda.</td>
+                <td colspan="{% if can_edit_delete %}8{% else %}7{% endif %}" class="text-center text-muted py-4">
+                  <i class="fas fa-inbox fa-2x mb-2 d-block" style="color: #D5DBDB;"></i>
+                  Nenhum registro ainda.
+                </td>
               </tr>
               {% endfor %}
             </tbody>
