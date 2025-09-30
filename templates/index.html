@@ -1,20 +1,108 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- Enhanced Header Section with Animations -->
+<style>
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .header-card {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .header-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 3s infinite;
+  }
+  
+  .logo-container {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: rgba(74, 144, 226, 0.1);
+    border: 2px solid rgba(74, 144, 226, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .stat-badge:hover {
+    background: rgba(74, 144, 226, 0.15);
+    border-color: rgba(74, 144, 226, 0.3);
+    transform: scale(1.05);
+  }
+  
+  .form-card {
+    position: relative;
+  }
+  
+  .form-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #4A90E2, #26D0CE, #9B59B6);
+    border-radius: 20px 20px 0 0;
+  }
+  
+  .input-group-icon {
+    position: relative;
+  }
+  
+  .input-group-icon i {
+    transition: all 0.3s ease;
+  }
+  
+  .form-control:focus ~ .input-icon,
+  .form-select:focus ~ .input-icon {
+    color: var(--primary-color);
+    transform: scale(1.1);
+  }
+</style>
+
 <!-- CRO Logo Section - Enhanced -->
 <div class="row mb-5">
   <div class="col-12">
-    <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,251,0.95) 100%); border-radius: 20px; overflow: hidden;">
-      <div class="card-body text-center py-5">
-        <div class="mb-3">
-          <img src="/static/logo-crors.png" alt="Conselho Regional de Odontologia do Rio Grande do Sul" class="img-fluid" style="max-height: 100px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));" onerror="this.innerHTML='<div class=\'text-primary fw-bold fs-4\'>CRO/RS</div>'">
+    <div class="card border-0 shadow-lg header-card" style="background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,251,0.98) 100%); border-radius: 24px; overflow: visible;">
+      <div class="card-body text-center py-5 px-4">
+        <div class="mb-4 logo-container">
+          <img src="/static/logo-crors.png" alt="Conselho Regional de Odontologia do Rio Grande do Sul" class="img-fluid" style="max-height: 110px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15));" onerror="this.innerHTML='<div class=\'text-primary fw-bold fs-4\'>CRO/RS</div>'">
         </div>
-        <h1 class="display-6 fw-bold mb-2" style="background: linear-gradient(135deg, #4A90E2 0%, #9B59B6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+        <h1 class="display-5 fw-bold mb-3 text-gradient" style="background: linear-gradient(135deg, #4A90E2 0%, #9B59B6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.5px;">
           ELEIÇÕES CRORS - 2025
         </h1>
-        <p class="text-muted mb-0 d-flex align-items-center justify-content-center gap-2">
+        <p class="text-muted mb-3 d-flex align-items-center justify-content-center gap-2" style="font-size: 1.05rem;">
           <i class="fas fa-phone-alt text-primary"></i>
           <span class="fw-medium">Sistema de Registro de Ligações</span>
         </p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap mt-4">
+          <div class="stat-badge">
+            <i class="fas fa-shield-alt text-primary"></i>
+            <span class="small fw-semibold">Sistema Seguro</span>
+          </div>
+          <div class="stat-badge">
+            <i class="fas fa-clock text-success"></i>
+            <span class="small fw-semibold">Registro em Tempo Real</span>
+          </div>
+          <div class="stat-badge">
+            <i class="fas fa-chart-line text-info"></i>
+            <span class="small fw-semibold">Relatórios Completos</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -22,33 +110,33 @@
 
 <div class="row g-4">
   <div class="col-lg-5">
-    <div class="card shadow-lg h-100" style="border-radius: 20px;">
+    <div class="card shadow-lg h-100 form-card" style="border-radius: 24px;">
       <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
           <h5 class="card-title mb-0 d-flex align-items-center gap-2">
-            <i class="fas fa-phone-volume text-primary" style="font-size: 1.3rem;"></i>
-            <span>Cadastrar nova ligação</span>
+            <i class="fas fa-phone-volume text-primary" style="font-size: 1.4rem;"></i>
+            <span style="font-size: 1.15rem;">Cadastrar nova ligação</span>
           </h5>
-          <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%); font-size: 0.8rem;">
+          <span class="badge rounded-pill px-3 py-2 shadow-hover" style="background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%); font-size: 0.85rem;">
             <i class="fas fa-user me-1"></i>{{ current_user_fullname }}
           </span>
         </div>
         <form method="post" action="/cadastrar" class="vstack gap-3">
-          <div>
+          <div class="input-group-icon">
             <label class="form-label fw-semibold d-flex align-items-center gap-2">
               <i class="fas fa-id-card text-primary"></i>
               CRO
             </label>
             <input type="text" name="cro" class="form-control" placeholder="Ex.: CRO/RS 12345" required>
           </div>
-          <div>
+          <div class="input-group-icon">
             <label class="form-label fw-semibold d-flex align-items-center gap-2">
               <i class="fas fa-user-circle text-success"></i>
               Nome do Inscrito
             </label>
             <input type="text" name="nome_inscrito" class="form-control" placeholder="Nome completo" required>
           </div>
-          <div>
+          <div class="input-group-icon">
             <label class="form-label fw-semibold d-flex align-items-center gap-2">
               <i class="fas fa-question-circle" style="color: #9B59B6;"></i>
               Dúvida
@@ -59,26 +147,26 @@
               {% endfor %}
             </select>
           </div>
-          <div>
+          <div class="input-group-icon">
             <label class="form-label fw-semibold d-flex align-items-center gap-2">
               <i class="fas fa-comment-dots text-secondary"></i>
               Observação
             </label>
-            <textarea name="observacao" class="form-control" rows="3" placeholder="Opcional: detalhes adicionais"></textarea>
+            <textarea name="observacao" class="form-control" rows="3" placeholder="Opcional: detalhes adicionais" style="resize: vertical;"></textarea>
           </div>
-          <div class="d-flex gap-3 flex-wrap">
-            <button type="submit" class="btn btn-success flex-grow-1" style="min-width: 200px;">
+          <div class="d-flex gap-3 flex-wrap mt-2">
+            <button type="submit" class="btn btn-success flex-grow-1 shadow-hover" style="min-width: 200px;">
               <i class="fas fa-plus-circle me-2"></i>Cadastrar ligação
             </button>
             {% if can_access_reports %}
-            <a class="btn btn-outline-secondary flex-grow-1" href="/relatorios" style="min-width: 160px;">
+            <a class="btn btn-outline-secondary flex-grow-1 shadow-hover" href="/relatorios" style="min-width: 160px;">
               <i class="fas fa-chart-bar me-2"></i>Ver relatórios
             </a>
             {% endif %}
           </div>
-          <div class="alert alert-info mb-0 d-flex align-items-start gap-2" style="background: rgba(74, 144, 226, 0.1); border: 2px solid rgba(74, 144, 226, 0.2); border-radius: 12px;">
+          <div class="alert alert-info mb-0 d-flex align-items-start gap-2 mt-2" style="background: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(74, 144, 226, 0.15)); border: none; border-left: 4px solid #4A90E2; border-radius: 12px;">
             <i class="fas fa-info-circle mt-1" style="color: #4A90E2;"></i>
-            <small style="color: #2C3E50;">A data e a hora são preenchidas automaticamente (fuso: Brasil/RS).</small>
+            <small style="color: #2C3E50; line-height: 1.5;">A data e a hora são preenchidas automaticamente (fuso: Brasil/RS).</small>
           </div>
         </form>
       </div>
@@ -86,58 +174,71 @@
   </div>
 
   <div class="col-lg-7">
-    <div class="card shadow-lg h-100" style="border-radius: 20px;">
+    <div class="card shadow-lg h-100" style="border-radius: 24px;">
       <div class="card-body p-4">
-        <h5 class="card-title mb-4 d-flex align-items-center gap-2">
-          <i class="fas fa-history text-primary" style="font-size: 1.3rem;"></i>
-          <span>Últimas ligações cadastradas</span>
-        </h5>
-        <div class="table-responsive">
-          <table class="table table-sm table-striped align-middle">
-            <thead>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+          <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+            <i class="fas fa-history text-primary" style="font-size: 1.4rem;"></i>
+            <span style="font-size: 1.15rem;">Últimas ligações cadastradas</span>
+          </h5>
+          <span class="badge bg-secondary px-3 py-2">
+            <i class="fas fa-database me-1"></i>
+            {% if ligacoes %}{{ ligacoes|length }} registro(s){% else %}0 registros{% endif %}
+          </span>
+        </div>
+        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+          <table class="table table-sm table-striped align-middle mb-0">
+            <thead style="position: sticky; top: 0; z-index: 10;">
               <tr>
-                <th>#</th>
-                <th>CRO</th>
-                <th>Nome</th>
-                <th>Dúvida</th>
-                <th>Observação</th>
-                <th>Atendente</th>
-                <th>Data/Hora</th>
+                <th style="min-width: 50px;">#</th>
+                <th style="min-width: 120px;">CRO</th>
+                <th style="min-width: 180px;">Nome</th>
+                <th style="min-width: 200px;">Dúvida</th>
+                <th style="min-width: 150px;">Observação</th>
+                <th style="min-width: 120px;">Atendente</th>
+                <th style="min-width: 140px;">Data/Hora</th>
                 {% if can_edit_delete %}
-                <th class="text-end">Ações</th>
+                <th class="text-end" style="min-width: 120px;">Ações</th>
                 {% endif %}
               </tr>
             </thead>
             <tbody>
               {% for l in ligacoes %}
-              <tr>
-                <td><span class="badge bg-primary">{{ l.id }}</span></td>
+              <tr style="animation: fadeIn 0.4s ease-out;">
+                <td><span class="badge bg-primary rounded-pill">{{ l.id }}</span></td>
                 <td class="fw-medium">{{ l.cro }}</td>
                 <td>{{ l.nome_inscrito }}</td>
-                <td><small>{{ l.duvida }}</small></td>
-                <td style="max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ l.observacao or '' }}">
-                  <small>{{ (l.observacao or '') }}</small>
+                <td><small class="text-muted">{{ l.duvida }}</small></td>
+                <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ l.observacao or '' }}">
+                  <small>{{ (l.observacao or '-') }}</small>
                 </td>
                 <td class="text-muted small">{{ l.atendente or '-' }}</td>
-                <td class="text-nowrap"><small>{{ format_sp(l.created_at) }}</small></td>
+                <td class="text-nowrap small">{{ format_sp(l.created_at) }}</td>
                 {% if can_edit_delete %}
                 <td class="text-end">
-                  <a href="/editar/{{ l.id }}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
-                    <i class="fas fa-edit"></i>
-                  </a>
-                  <form method="post" action="/excluir/{{ l.id }}" onsubmit="return confirm('Excluir a ligação #{{ l.id }}?');" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </form>
+                  <div class="btn-group btn-group-sm">
+                    <a href="/editar/{{ l.id }}" class="btn btn-outline-primary" title="Editar">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <form method="post" action="/excluir/{{ l.id }}" onsubmit="return confirm('Excluir a ligação #{{ l.id }}?');" class="d-inline">
+                      <button type="submit" class="btn btn-outline-danger" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </div>
                 </td>
                 {% endif %}
               </tr>
               {% else %}
               <tr>
-                <td colspan="{% if can_edit_delete %}8{% else %}7{% endif %}" class="text-center text-muted py-4">
-                  <i class="fas fa-inbox fa-2x mb-2 d-block" style="color: #D5DBDB;"></i>
-                  Nenhum registro ainda.
+                <td colspan="{% if can_edit_delete %}8{% else %}7{% endif %}" class="text-center text-muted py-5">
+                  <div class="d-flex flex-column align-items-center gap-3">
+                    <i class="fas fa-inbox fa-3x" style="color: #D5DBDB; opacity: 0.5;"></i>
+                    <div>
+                      <p class="mb-1 fw-medium">Nenhum registro encontrado</p>
+                      <small>Cadastre a primeira ligação usando o formulário ao lado</small>
+                    </div>
+                  </div>
                 </td>
               </tr>
               {% endfor %}
