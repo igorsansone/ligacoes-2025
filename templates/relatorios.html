@@ -424,19 +424,21 @@ function createGradient(ctx, colors, direction = 'vertical') {
 }
 
 // Enhanced Chart.js default configuration
-Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
-Chart.defaults.font.size = 13;
-Chart.defaults.color = '#374151';
-Chart.defaults.plugins.legend.labels.usePointStyle = true;
-Chart.defaults.plugins.legend.labels.boxWidth = 8;
-Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-Chart.defaults.plugins.tooltip.titleColor = '#1f2937';
-Chart.defaults.plugins.tooltip.bodyColor = '#4b5563';
-Chart.defaults.plugins.tooltip.borderColor = '#e5e7eb';
-Chart.defaults.plugins.tooltip.borderWidth = 1;
-Chart.defaults.plugins.tooltip.cornerRadius = 10;
-Chart.defaults.plugins.tooltip.displayColors = true;
-Chart.defaults.plugins.tooltip.padding = 12;
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+  Chart.defaults.font.size = 13;
+  Chart.defaults.color = '#374151';
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.boxWidth = 8;
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+  Chart.defaults.plugins.tooltip.titleColor = '#1f2937';
+  Chart.defaults.plugins.tooltip.bodyColor = '#4b5563';
+  Chart.defaults.plugins.tooltip.borderColor = '#e5e7eb';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.cornerRadius = 10;
+  Chart.defaults.plugins.tooltip.displayColors = true;
+  Chart.defaults.plugins.tooltip.padding = 12;
+}
 
 // Animation configuration
 const chartAnimation = {
@@ -481,13 +483,16 @@ const elEnd = document.getElementById('fEnd');
 const elTipos = document.getElementById('fTipos');
 
 function getTiposSelecionados() {
-  return Array.from(elTipos.selectedOptions).map(o => o.value);
+  const tiposEl = document.getElementById('fTipos');
+  return tiposEl ? Array.from(tiposEl.selectedOptions).map(o => o.value) : [];
 }
 
 function buildQuery() {
   const params = new URLSearchParams();
-  if (elStart.value) params.set('start', elStart.value);
-  if (elEnd.value) params.set('end', elEnd.value);
+  const startEl = document.getElementById('fStart');
+  const endEl = document.getElementById('fEnd');
+  if (startEl?.value) params.set('start', startEl.value);
+  if (endEl?.value) params.set('end', endEl.value);
   const tipos = getTiposSelecionados();
   if (tipos.length) params.set('tipos', tipos.join(','));
   return params.toString();
@@ -1280,8 +1285,6 @@ document.addEventListener('DOMContentLoaded', function() {
       loadComparativo(); 
       loadHorarios(); 
       loadAtendentes();
-      // Update KPIs after initial chart loading
-      setTimeout(updateAllKPIs, 1500);
     } else if (checkAttempts < maxAttempts) {
       setTimeout(checkAndInitialize, 500);
     } else {
@@ -1292,9 +1295,9 @@ document.addEventListener('DOMContentLoaded', function() {
       loadComparativo(); 
       loadHorarios(); 
       loadAtendentes();
-      // Still try to update KPIs
-      setTimeout(updateAllKPIs, 1000);
     }
+    // Always update KPIs after attempting to load charts, regardless of Chart.js availability
+    setTimeout(updateAllKPIs, 1000);
   }
   
   checkAndInitialize();
