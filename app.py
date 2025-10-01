@@ -76,8 +76,7 @@ if "atendente" not in cols:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN atendente VARCHAR(100) NULL"))
 
 DUVIDA_OPCOES = [
-    "Dúvida sanada - Profissional apto ao voto",
-    "Dúvida sanada - Profissional não apto ao voto",
+    "Dúvida sanada - outros",
     "Dúvida encaminhada ao jurídico",
     "Dúvida sanada - Profissional não apto ao voto (débitos)",
     "Dúvida sanada - Profissional não apto ao voto (atualização cadastral)",
