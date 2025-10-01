@@ -554,6 +554,30 @@ def _filter_rows(rows, start_date, end_date, tipos):
         filtered.append((dia_br, duvida))
     return filtered
 
+# API: retorna o total absoluto de ligações cadastradas (sem filtros)
+# Este endpoint é usado para exibir o total geral no KPI, independente dos filtros aplicados
+@app.get("/api/stats/total")
+def stats_total(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):
+    # Verificar autenticação
+    if not session_token or not is_valid_session(session_token):
+        raise HTTPException(status_code=401, detail="Não autorizado")
+    
+    # Verificar permissão para acessar relatórios
+    current_user = active_sessions[session_token]
+    current_username = current_user['username']
+    if not can_access_reports(current_username):
+        raise HTTPException(status_code=403, detail="Acesso negado - Você não tem permissão para acessar relatórios")
+    
+    # Buscar o total absoluto de ligações sem aplicar filtros
+    db = SessionLocal()
+    try:
+        # Conta todas as ligações no banco de dados
+        total_count = db.query(Ligacao).count()
+    finally:
+        db.close()
+    
+    return {"total": total_count}
+
 # API: estatística por dúvida (com filtros)
 @app.get("/api/stats/por_duvida")
 def stats_por_duvida(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKIE_NAME)):

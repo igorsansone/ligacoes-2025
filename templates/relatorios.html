@@ -446,17 +446,20 @@ const chartAnimation = {
 };
 
 // Global KPI data store to persist values across function calls
+// IMPORTANTE: 'totalAbsoluto' é o total de ligações cadastradas no sistema (nunca muda com filtros)
+// Os demais KPIs refletem os dados filtrados pelas opções selecionadas
 window.kpiData = {
-  total: '0',
+  totalAbsoluto: '0',  // Total absoluto de ligações (sem filtros)
   mediaDiaria: '0',
   picoHorario: '--:--',
   atendentesAtivos: '0'
 };
 
 // Function to update KPI cards
+// NOTA: Esta função NÃO atualiza o totalAbsoluto, pois ele é carregado separadamente
 function updateKPICards(data) {
   // Update global KPI data with provided values only
-  if (data.total !== undefined) window.kpiData.total = data.total.toLocaleString ? data.total.toLocaleString('pt-BR') : data.total.toString();
+  // totalAbsoluto não é atualizado aqui - ele é fixo e vem do endpoint /api/stats/total
   if (data.mediaDiaria !== undefined) window.kpiData.mediaDiaria = data.mediaDiaria;
   if (data.picoHorario !== undefined) window.kpiData.picoHorario = data.picoHorario;
   if (data.atendentesAtivos !== undefined) window.kpiData.atendentesAtivos = data.atendentesAtivos;
@@ -470,10 +473,40 @@ function updateKPICards(data) {
   };
 
   // Update display with current data
-  if (kpiElements.total) kpiElements.total.textContent = window.kpiData.total;
+  // Total sempre mostra o valor absoluto (totalAbsoluto), não o valor filtrado
+  if (kpiElements.total) kpiElements.total.textContent = window.kpiData.totalAbsoluto;
   if (kpiElements.media) kpiElements.media.textContent = window.kpiData.mediaDiaria;
   if (kpiElements.pico) kpiElements.pico.textContent = window.kpiData.picoHorario;
   if (kpiElements.atendentes) kpiElements.atendentes.textContent = window.kpiData.atendentesAtivos;
+}
+
+// Função para carregar o total absoluto de ligações (sem filtros)
+// Este valor é carregado uma única vez ao iniciar a página e nunca muda
+async function loadAbsoluteTotal() {
+  try {
+    console.log('Loading absolute total from /api/stats/total...');
+    const res = await fetch('/api/stats/total');
+    
+    if (!res.ok) {
+      console.error('Error loading absolute total:', res.status, res.statusText);
+      return;
+    }
+    
+    const data = await res.json();
+    console.log('Absolute total received:', data);
+    
+    if (data?.total !== undefined) {
+      // Armazena o total absoluto e atualiza o display
+      window.kpiData.totalAbsoluto = data.total.toLocaleString('pt-BR');
+      const totalElement = document.getElementById('kpiTotalLigacoes');
+      if (totalElement) {
+        totalElement.textContent = window.kpiData.totalAbsoluto;
+      }
+      console.log('Absolute total set to:', window.kpiData.totalAbsoluto);
+    }
+  } catch (error) {
+    console.error('Exception loading absolute total:', error);
+  }
 }
 
 const elStart = document.getElementById('fStart');
@@ -1161,33 +1194,31 @@ function exportData(type, format) {
 }
 
 // Comprehensive KPI update function that aggregates data from all sources
+// NOTA: Esta função atualiza apenas os KPIs filtrados (média diária, pico horário, atendentes ativos)
+// O total absoluto é mantido fixo e carregado separadamente via loadAbsoluteTotal()
 async function updateAllKPIs() {
   try {
     const q = buildQuery();
     
     // Get data from all endpoints simultaneously
-    const [duvidaRes, diaRes, horariosRes, atendenteRes] = await Promise.all([
-      fetch('/api/stats/por_duvida' + (q ? '?' + q : '')),
+    const [diaRes, horariosRes, atendenteRes] = await Promise.all([
       fetch('/api/stats/por_dia' + (q ? '?' + q : '')),
       fetch('/api/stats/pico_horarios' + (q ? '?' + q : '')),
       fetch('/api/stats/por_atendente' + (q ? '?' + q : ''))
     ]);
     
     // Parse all responses
-    const [duvidaData, diaData, horariosData, atendenteData] = await Promise.all([
-      duvidaRes.ok ? duvidaRes.json() : null,
+    const [diaData, horariosData, atendenteData] = await Promise.all([
       diaRes.ok ? diaRes.json() : null,
       horariosRes.ok ? horariosRes.json() : null,
       atendenteRes.ok ? atendenteRes.json() : null
     ]);
     
-    // Calculate comprehensive KPI data
+    // Calculate comprehensive KPI data (exceto total, que é sempre absoluto)
     const kpiUpdate = {};
     
-    // Total ligações (from duvida or dia data)
-    if (duvidaData?.total) {
-      kpiUpdate.total = duvidaData.total;
-    }
+    // Total ligações NÃO é atualizado aqui - sempre mostra o valor absoluto
+    // que foi carregado no início via loadAbsoluteTotal()
     
     // Média diária (from dia data)
     if (diaData?.counts?.length) {
@@ -1211,9 +1242,10 @@ async function updateAllKPIs() {
       kpiUpdate.atendentesAtivos = activeAttendees.toString();
     }
     
-    // Update all KPI cards at once
+    // Update all KPI cards at once (exceto total)
     updateKPICards(kpiUpdate);
-    console.log('KPI cards updated comprehensively:', kpiUpdate);
+    console.log('KPI cards updated (filtered data):', kpiUpdate);
+    console.log('Total absoluto permanece:', window.kpiData.totalAbsoluto);
     
   } catch (error) {
     console.error('Error updating KPIs comprehensively:', error);
@@ -1267,6 +1299,10 @@ document.getElementById('btnDiaDownload').addEventListener('click', () => {
 
 /* Carrega inicial - Only if Chart.js is available */
 document.addEventListener('DOMContentLoaded', function() {
+  // Carregar o total absoluto primeiro (independente de Chart.js)
+  // Este total nunca muda, mostrando sempre todas as ligações cadastradas
+  loadAbsoluteTotal();
+  
   // Wait for Chart.js to be available
   let checkAttempts = 0;
   const maxAttempts = 10;
@@ -1280,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', function() {
       loadComparativo(); 
       loadHorarios(); 
       loadAtendentes();
-      // Update KPIs after initial chart loading
+      // Update KPIs after initial chart loading (exceto total, que já foi carregado)
       setTimeout(updateAllKPIs, 1500);
     } else if (checkAttempts < maxAttempts) {
       setTimeout(checkAndInitialize, 500);
