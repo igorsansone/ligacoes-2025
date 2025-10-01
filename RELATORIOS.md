@@ -99,7 +99,7 @@ Formato profissional para apresentações e arquivo.
 
 **PDF Completo**:
 - Listagem completa com formatação profissional
-- **Limitação**: Máximo 100 registros (otimização)
+- Inclui todos os registros filtrados sem limitações
 - Tabela formatada com cabeçalhos
 - Metadados de geração
 
@@ -235,7 +235,6 @@ curl "/api/export/csv?tipo=detalhado&start=2025-09-01&end=2025-09-30"
 
 ### Performance
 - Consultas otimizadas com índices
-- Limitação de registros em PDFs (100)
 - Cache de sessão para autenticação
 
 ### Troubleshooting
