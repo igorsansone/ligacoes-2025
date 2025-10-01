@@ -977,7 +977,7 @@ def export_pdf(request: Request, session_token: str = Cookie(None, alias=SESSION
     if report_type == "detalhado":
         # Tabela detalhada
         data = [["ID", "CRO", "Nome", "Dúvida", "Atendente", "Data/Hora"]]
-        for call in filtered_calls[:100]:  # Limitar a 100 registros para PDF
+        for call in filtered_calls:
             data.append([
                 str(call.id),
                 call.cro[:15] + "..." if len(call.cro) > 15 else call.cro,
