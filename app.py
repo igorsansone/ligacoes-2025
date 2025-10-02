@@ -53,6 +53,7 @@ class Ligacao(Base):
     observacao = Column(String(1000), nullable=True)
     atendente = Column(String(100), nullable=True)  # Nome do atendente que registrou
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime, nullable=True)  # Soft delete: quando o registro foi excluído
 
 # Cria tabela se não existir
 Base.metadata.create_all(bind=engine)
@@ -74,6 +75,14 @@ if "atendente" not in cols:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN atendente VARCHAR(100)"))
         else:
             conn.execute(text("ALTER TABLE ligacoes ADD COLUMN atendente VARCHAR(100) NULL"))
+
+# MIGRAÇÃO LEVE: adiciona coluna 'deleted_at' se faltar (soft delete)
+if "deleted_at" not in cols:
+    with engine.begin() as conn:
+        if DATABASE_URL.startswith("sqlite"):
+            conn.execute(text("ALTER TABLE ligacoes ADD COLUMN deleted_at TIMESTAMP"))
+        else:
+            conn.execute(text("ALTER TABLE ligacoes ADD COLUMN deleted_at TIMESTAMP NULL"))
 
 DUVIDA_OPCOES = [
     "Dúvida sanada - outros",
@@ -340,7 +349,8 @@ def home(request: Request, session_token: str = Cookie(None, alias=SESSION_COOKI
     
     db = SessionLocal()
     try:
-        ligacoes = db.query(Ligacao).order_by(Ligacao.id.desc()).limit(50).all()
+        # Mostrar apenas registros não excluídos (deleted_at IS NULL)
+        ligacoes = db.query(Ligacao).filter(Ligacao.deleted_at.is_(None)).order_by(Ligacao.id.desc()).limit(50).all()
     finally:
         db.close()
     return templates.TemplateResponse(
@@ -410,7 +420,7 @@ def editar_form(request: Request, ligacao_id: int, session_token: str = Cookie(N
     db = SessionLocal()
     try:
         obj = db.get(Ligacao, ligacao_id)
-        if not obj:
+        if not obj or obj.deleted_at is not None:
             raise HTTPException(status_code=404, detail="Registro não encontrado")
     finally:
         db.close()
@@ -453,7 +463,7 @@ def editar_submit(
     db = SessionLocal()
     try:
         obj = db.get(Ligacao, ligacao_id)
-        if not obj:
+        if not obj or obj.deleted_at is not None:
             raise HTTPException(status_code=404, detail="Registro não encontrado")
 
         obj.cro = cro.strip()
@@ -485,7 +495,8 @@ def excluir(ligacao_id: int, session_token: str = Cookie(None, alias=SESSION_COO
         obj = db.get(Ligacao, ligacao_id)
         if not obj:
             raise HTTPException(status_code=404, detail="Registro não encontrado")
-        db.delete(obj)
+        # Soft delete: marcar como excluído ao invés de deletar
+        obj.deleted_at = datetime.now(UTC)
         db.commit()
     finally:
         db.close()
